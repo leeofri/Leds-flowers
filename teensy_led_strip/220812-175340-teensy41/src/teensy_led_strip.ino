@@ -1,6 +1,7 @@
 #include "FastLED.h"
 
 #include <Audio.h>
+#include <math.h>
 
 #define OCTAVE 1   //   // Group buckets into octaves  (use the log output function LOG_OUT 1)
 #define OCT_NORM 0 // Don't normalise octave intensities by number of bins
@@ -97,7 +98,10 @@ void loop()
         {
             for (int i = 0; i < 7; i++)
             { // print the first 20 bins TODO:: [0, 1, 2:4, 5:8, 9:16, 17:32, 3:64, 65:128]
-                fht_oct_out[i] = fft256_1.read(i, i + 15)*1000;
+                float read = fft256_1.read(i, i + 15);
+                // float readMul1000 = read*1000;
+                float readNormalize = 16*log(sqrt(read));
+                fht_oct_out[i] = readNormalize;
             }
         }
 
