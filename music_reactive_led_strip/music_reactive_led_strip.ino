@@ -86,23 +86,6 @@ void loop() {
 
     // every 50th loop, adjust the volume accourding to the value on A2 (Pot)
     if (counter >= 50) {
-      ADMUX = 0x40 | (1 & 0x07); // set admux to look at Analogpin A1 - Master Volume
-
-
-      while (!(ADCSRA & 0x10)); // wait for adc to be ready
-      ADCSRA = 0xf5; // restart adc
-      delay(10);
-      while (!(ADCSRA & 0x10)); // wait for adc to be ready
-      ADCSRA = 0xf5; // restart adc
-      byte m = ADCL; // fetch adc data
-      byte j = ADCH;
-      int k = (j << 8) | m; // form into an int
-      float master_volume = (k + 0.1) / 1000 + .5; // so the valu will be between ~0.5 and 1.5
-      for (int i = 1; i < 8; i++) {
-        noise_fact_adj[i] = noise_fact[i] * master_volume;
-      }
-
-      ADMUX = 0x40 | (0 & 0x07); // set admux back to look at A0 analog pin (to read the microphone input
       counter = 0;
     }
 

@@ -1,8 +1,5 @@
 #include "FastLED.h"
 
-// How many leds in your strip?
-#include <FastLED.h>
-
 #include <Audio.h>
 
 #define OCTAVE 1   //   // Group buckets into octaves  (use the log output function LOG_OUT 1)
@@ -17,13 +14,13 @@ int noise[] = {204, 188, 68, 73, 150, 98, 88, 68}; // noise level determined by 
 float noise_fact[] = {15, 7, 1.5, 1, 1.2, 1.4, 1.7, 3};     // noise level determined by playing pink noise and seeing levels [trial and error]{204,188,68,73,150,98,88,68}
 float noise_fact_adj[] = {15, 7, 1.5, 1, 1.2, 1.4, 1.7, 3}; // noise level determined by playing pink noise and seeing levels [trial and error]{204,188,68,73,150,98,88,68}
 
-#define LED_PIN 2
+#define LED_PIN 19
 #define LED_TYPE WS2811
 #define COLOR_ORDER GRB
 
 // Params for width and height
-const uint8_t kMatrixWidth = 11;
-const uint8_t kMatrixHeight = 27;
+const uint8_t kMatrixWidth = 1;
+const uint8_t kMatrixHeight = 300;
 #define NUM_LEDS (kMatrixWidth * kMatrixHeight)
 //#define NUM_LEDS    15
 
@@ -53,7 +50,7 @@ void setup()
     Serial.println("FFT test");
     Serial.begin(115200);
     delay(1000);
-    FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+    FastLED.addLeds<kMatrixWidth, LED_TYPE, LED_PIN, COLOR_ORDER>(leds, kMatrixHeight).setCorrection(TypicalLEDStrip);
 
     FastLED.setBrightness(200);
     fill_solid(leds, NUM_LEDS, CRGB::Black);
@@ -72,6 +69,7 @@ void loop()
     int saturation_prev = 0;
     int brightness = 0;
     int brightness_prev = 0;
+    float fht_oct_out[8];
 
     while (1)
     { // reduces jitter
@@ -93,21 +91,26 @@ void loop()
         // fht_run(); // process the data in the fht
         // fht_mag_octave(); // take the output of the fht  fht_mag_log()
 
+        
         //////////// teensy reas 256 samples
         if (fft256_1.available())
         {
             for (int i = 0; i < 7; i++)
-            { // print the first 20 bins
+            { // print the first 20 bins TODO:: [0, 1, 2:4, 5:8, 9:16, 17:32, 3:64, 65:128]
                 fht_oct_out[i] = fft256_1.read(i, i + 15);
-                Serial.print(fht_oct_out[i], 3);
-                Serial.print(" ");
             }
-            Serial.println();
         }
 
         // every 50th loop, adjust the volume accourding to the value on A2 (Pot)
         if (counter >= 50)
         {
+            for (int i = 0; i < 7; i++)
+            {
+                Serial.print(fht_oct_out[i], 3);
+                Serial.print(" ");
+            }
+            Serial.println();
+            counter=0;
         }
 
         counter++;
@@ -150,10 +153,10 @@ void loop()
                 j = j * 30; // (force it to more discrete values)
             }
 
-            Serial.print(prev_j[i] - j);
+            // Serial.print(prev_j[i] - j);
             prev_j[i] = j;
 
-            Serial.print(" ");
+            // Serial.print(" ");
 
             // this fills in 11 LED's with interpolated values between each of the 8 OCT values
             if (i >= 2)
@@ -219,7 +222,7 @@ void loop()
             beat = 0;
         }
 
-        Serial.println();
+        // Serial.println();
     }
 }
 
