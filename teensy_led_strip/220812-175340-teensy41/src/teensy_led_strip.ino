@@ -92,13 +92,17 @@ void loop()
         // fht_mag_octave(); // take the output of the fht  fht_mag_log()
 
         
-        //////////// teensy reas 256 samples
+        //////////// teensy reads 256 samples
         if (fft256_1.available())
         {
-            for (int i = 0; i < 7; i++)
-            { // print the first 20 bins TODO:: [0, 1, 2:4, 5:8, 9:16, 17:32, 3:64, 65:128]
-                fht_oct_out[i] = fft256_1.read(i, i + 15);
-            }
+            fht_oct_out[0] = fft256_1.read(0);
+            fht_oct_out[1] = fft256_1.read(1);
+            fht_oct_out[2] = fft256_1.read(2, 4) / (4-2)+1;
+            fht_oct_out[3] = fft256_1.read(5, 8) / (8-5)+1;
+            fht_oct_out[4] = fft256_1.read(9, 16) / (16-9)+1;
+            fht_oct_out[5] = fft256_1.read(17, 32) / (32-17)+1;
+            fht_oct_out[6] = fft256_1.read(33, 64) / (64-33)+1;
+            fht_oct_out[7] = fft256_1.read(65, 127) / (127-65)+1;
         }
 
         // every 50th loop, adjust the volume accourding to the value on A2 (Pot)
