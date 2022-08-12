@@ -97,7 +97,7 @@ void loop()
         {
             for (int i = 0; i < 7; i++)
             { // print the first 20 bins TODO:: [0, 1, 2:4, 5:8, 9:16, 17:32, 3:64, 65:128]
-                fht_oct_out[i] = fft256_1.read(i, i + 15);
+                fht_oct_out[i] = fft256_1.read(i, i + 15)*1000;
             }
         }
 
