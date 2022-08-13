@@ -145,17 +145,21 @@ void loop()
 
         // counter++;
         // End of Fourier Transform code - output is stored in fht_oct_out[i].
+        float master_volume  = 0.8; //float master_volume=(k+0.1)/1000 +.5; 
 
+        for (int i=1; i<8; i++) 
+        {
+          noise_fact_adj[i]=noise_fact[i]*master_volume;
+        }
         // i=0-7 frequency (octave) bins (don't use 0 or 1), fht_oct_out[1]= amplitude of frequency for bin 1
         // for loop a) removes background noise average and takes absolute value b) low / high pass filter as still very noisy
         // c) maps amplitude of octave to a colour between blue and red d) sets pixel colour to amplitude of each frequency (octave)
-
         for (int i = 1; i < 8; i++)
         { // goes through each octave. skip the first 1, which is not useful
 
             int j;
             // Serial.print("noise stuff:");
-            j = (fht_oct_out[i] - noise[i]*0.8); // take the pink noise average level out, take the asbolute value to avoid negative numbers
+            j = (fht_oct_out[i] - noise[i]); // take the pink noise average level out, take the asbolute value to avoid negative numbers
             if (j < 10)
             {
                 j = 0;
