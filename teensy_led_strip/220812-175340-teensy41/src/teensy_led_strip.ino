@@ -1,7 +1,14 @@
-#include "FastLED.h"
-
 #include <Audio.h>
 #include <math.h>
+
+#include "Fast_octo_LED.h"
+
+CTeensy4Controller<GRB, WS2811_800kHz> *pcontroller;
+
+const int numPins = 2;
+// byte pinList[numPins] = {33, 34, 35, 36, 37, 38, 39, 40};
+byte pinList[numPins] = {19, 2};
+const int ledsPerStrip = 300;
 
 #define OCTAVE 1   //   // Group buckets into octaves  (use the log output function LOG_OUT 1)
 #define OCT_NORM 0 // Don't normalise octave intensities by number of bins
@@ -16,16 +23,25 @@ float noise_fact[] = {15, 7, 1.5, 1, 1.2, 1.4, 1.7, 3};     // noise level deter
 float noise_fact_adj[] = {15, 7, 1.5, 1, 1.2, 1.4, 1.7, 3}; // noise level determined by playing pink noise and seeing levels [trial and error]{204,188,68,73,150,98,88,68}
 
 #define LED_PIN 19
-#define LED_TYPE WS2811
+#define LED_TYPE WS2811_800kHz
 #define COLOR_ORDER GRB
 
 // Params for width and height
-const uint8_t kMatrixWidth = 1;
-const uint16_t kMatrixHeight = 300;
+const uint8_t kMatrixWidth = numPins;
+const uint16_t kMatrixHeight = ledsPerStrip;
 #define NUM_LEDS (kMatrixWidth * kMatrixHeight)
 //#define NUM_LEDS    15
 
 CRGB leds[NUM_LEDS];
+
+// These buffers need to be large enough for all the pixels.
+// The total number of pixels is "ledsPerStrip * numPins".
+// Each pixel needs 3 bytes, so multiply by 3.  An "int" is
+// 4 bytes, so divide by 4.  The array is created using "int"
+// so the compiler will align it to 32 bit memory.
+DMAMEM int displayMemory[ledsPerStrip * numPins * 3 / 4];
+int drawingMemory[ledsPerStrip * numPins * 3 / 4];
+OctoWS2811 octo(ledsPerStrip, displayMemory, drawingMemory, WS2811_RGB | WS2811_800kHz, numPins, pinList);
 
 int counter2 = 0;
 
@@ -46,14 +62,16 @@ void setup()
     sgtl5000_1.enable();
     sgtl5000_1.volume(0.5);
 
-    while (!Serial)
-        ; // wait for Arduino Serial Monitor
-    Serial.println("FFT test");
     Serial.begin(115200);
+    while (!Serial); // wait for Arduino Serial Monitor
+    Serial.println("FFT test");
     delay(1000);
-    FastLED.addLeds<kMatrixWidth, LED_TYPE, LED_PIN, COLOR_ORDER>(leds, kMatrixHeight).setCorrection(TypicalLEDStrip);
+    octo.begin();
+	pcontroller = new CTeensy4Controller<GRB, WS2811_800kHz>(&octo);
 
-    FastLED.setBrightness(200);
+	FastLED.addLeds(pcontroller, leds, numPins * ledsPerStrip);
+	FastLED.setBrightness(84);
+
     fill_solid(leds, NUM_LEDS, CRGB::Black);
     FastLED.show();
 }
@@ -118,14 +136,14 @@ void loop()
                 // fht_oct_out[i] = 16*log(sqrt(fft256_1.read(i*15,i*15+15)));
                 // fht_oct_out[i] = 16*log(sqrt(fht_oct_out[i]));
 
-                // Serial.print("bef:");
-                // Serial.print(fht_oct_out[i] );
-                // Serial.print(" ");
+                Serial.print("bef:");
+                Serial.print(fht_oct_out[i] );
+                Serial.print(" ");
                 // fht_oct_out[i] = 16*log(sqrt(fht_oct_out[i]));
                 fht_oct_out[i] = fht_oct_out[i] * 1000;
-                // Serial.print("aft:");
-                // Serial.print(fht_oct_out[i]);
-                // Serial.println(" ");
+                Serial.print("aft:");
+                Serial.print(fht_oct_out[i]);
+                Serial.println(" ");
 
                 // fht_oct_out[i] = 16*log(sqrt(read));
             }
@@ -145,7 +163,11 @@ void loop()
 
         // counter++;
         // End of Fourier Transform code - output is stored in fht_oct_out[i].
-        float master_volume  = 0.8; //float master_volume=(k+0.1)/1000 +.5; 
+
+        int analogVal = analogRead(3);
+        float master_volume=(analogVal+0.1)/1000 +.5;
+        // float master_volume  = 0.8;
+        // Serial.print("master_volume: "); Serial.print(master_volume);
 
         for (int i=1; i<8; i++) 
         {
@@ -188,10 +210,10 @@ void loop()
                 j = j * 30; // (force it to more discrete values)
             }
 
-            // Serial.print(j);
+            Serial.print(j);
             prev_j[i] = j;
 
-            // Serial.print(" ");
+            Serial.print(" ");
 
             // this fills in 11 LED's with interpolated values between each of the 8 OCT values
             if (i >= 2)
