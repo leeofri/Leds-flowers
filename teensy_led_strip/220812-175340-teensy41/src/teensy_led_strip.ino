@@ -8,7 +8,7 @@
 #define FHT_N 256  // set to 256 point fht
 
 int noise[] = {204, 188, 68, 73, 150, 98, 88, 68}; // noise level determined by playing pink noise and seeing levels [trial and error]{204,188,68,73,150,98,88,68}
-float noise_pink_weksler[] = {0.001932740741,0.003002037037,1.003792037,1.002415704,1.001474185,1.000664852,1.000250556,1.000018741};
+float noise_pink_weksler[] = {0.001932740741, 0.003002037037, 1.003792037, 1.002415704, 1.001474185, 1.000664852, 1.000250556, 1.000018741};
 
 // int noise[] = {204,190,108,85,65,65,55,60}; // noise for mega adk
 // int noise[] = {204,195,100,90,85,80,75,75}; // noise for NANO
@@ -26,6 +26,14 @@ const uint16_t kMatrixHeight = 300;
 #define NUM_LEDS (kMatrixWidth * kMatrixHeight)
 //#define NUM_LEDS    15
 
+// Param for different pixel layouts
+const bool kMatrixSerpentineLayout = true;
+// Set 'kMatrixSerpentineLayout' to false if your pixels are
+// laid out all running the same way, like this:
+
+// Set 'kMatrixSerpentineLayout' to true if your pixels are
+// laid out back-and-forth, like this:
+
 CRGB leds[NUM_LEDS];
 
 int counter2 = 0;
@@ -39,6 +47,7 @@ AudioConnection patchCord2(adc1, 0, i2s1, 1);
 AudioConnection patchCord3(adc1, fft256_1);
 AudioControlSGTL5000 sgtl5000_1; // xy=265,161
 AudioAnalyzeFFT1024 adsg;
+const float minPink 
 // GUItool: end automatically generated code
 
 void setup()
@@ -53,16 +62,16 @@ void setup()
     Serial.println("FFT test");
     Serial.begin(115200);
     delay(1000);
-    FastLED.addLeds<kMatrixWidth, LED_TYPE, LED_PIN, COLOR_ORDER>(leds, kMatrixHeight).setCorrection(TypicalLEDStrip);
+    // FastLED.addLeds<kMatrixWidth, LED_TYPE, LED_PIN, COLOR_ORDER>(leds, kMatrixHeight).setCorrection(TypicalLEDStrip);
 
-    FastLED.setBrightness(200);
-    fill_solid(leds, NUM_LEDS, CRGB::Black);
-    FastLED.show();
+    // FastLED.setBrightness(200);
+    // fill_solid(leds, NUM_LEDS, CRGB::Black);
+    // FastLED.show();
 }
 
 void loop()
 {
-    int prev_j[8];
+    int prev_octv[8];
     float debug_j[8];
     int beat = 0;
     int prev_oct_j;
@@ -74,29 +83,13 @@ void loop()
     int brightness = 0;
     int brightness_prev = 0;
     float fht_oct_out[8] = {0};
+    float oct_normal[8];
 
     while (1)
-    { // reduces jitter
-      // int analogPrint = analogRead(15);
-      // Serial.println(analogPrint);
-        //////////////////////////////// arduino
-        // cli();  // UDRE interrupt slows this way down on arduino1.0
-        // for (int i = 0 ; i < FHT_N ; i++) { // save 256 samples
-        //   while (!(ADCSRA & 0x10)); // wait for adc to be ready
-        //   ADCSRA = 0xf5; // restart adc
-        //   byte m = ADCL; // fetch adc data
-        //   byte j = ADCH;
-        //   int k = (j << 8) | m; // form into an int
-        //   k -= 0x0200; // form into a signed int
-        //   k <<= 6; // form into a 16b signed int
-        //   fht_input[i] = k; // put real data into bins
-        // }
-        // fht_window(); // window the data for better frequency response
-        // fht_reorder(); // reorder the data before doing the fht
-        // fht_run(); // process the data in the fht
-        // fht_mag_octave(); // take the output of the fht  fht_mag_log()
+    {
 
         //////////// teensy reads 256 samples
+        float master_volume = 1.0; //  float master_volume=(k+0.1)/1000 +.5;
         if (fft256_1.available())
         {
             fht_oct_out[0] = fft256_1.read(0);
@@ -108,156 +101,103 @@ void loop()
             fht_oct_out[6] = fft256_1.read(33, 64) / (64 - 33) + 1;
             fht_oct_out[7] = fft256_1.read(65, 127) / (127 - 65) + 1;
 
-            // fht_oct_out[0] = fft256_1.read(65, 127);
-            // fht_oct_out[1] = fft256_1.read(1,10);
-            // fht_oct_out[2] = fft256_1.read(10, 20);
-            // fht_oct_out[3] = fft256_1.read(20, 30);
-            // fht_oct_out[4] = fft256_1.read(30, 40);
-            // fht_oct_out[5] = fft256_1.read(40, 50);
-            // fht_oct_out[6] = fft256_1.read(50, 60);
-            // fht_oct_out[7] = fft256_1.read(60, 70);
-            // fht_oct_out[8] = fft256_1.read(70, 80);
-            // fht_oct_out[9] = fft256_1.read(80, 90);
-            // fht_oct_out[10] = fft256_1.read(90, 100);
-            // fht_oct_out[11] = fft256_1.read(100, 110);
-            // fht_oct_out[12] = fft256_1.read(110, 120);
-            // fht_oct_out[8] = fft256_1.read(0);
             for (int i = 0; i < 8; i++)
             {
-                // fht_oct_out[i] = 16*log(sqrt(fft256_1.read(i*15,i*15+15)));
-                // fht_oct_out[i] = 16*log(sqrt(fht_oct_out[i]));
-
-                // Serial.print("bef:");
-                // Serial.print(fht_oct_out[i] );
-                // Serial.print(" ");
-                // fht_oct_out[i] = 16*log(sqrt(fht_oct_out[i]));
-                
-                debug_j[i] = fht_oct_out[i] - noise_pink_weksler[i];
-                // Serial.print("aft:");
-                // Serial.print(fht_oct_out[i]);
-                // Serial.println(" ");
-
-                // fht_oct_out[i] = 16*log(sqrt(read));
+                oct_normal[i] = fht_oct_out[i] - noise_pink_weksler[i] * master_volume;
+                debug_j[i] = fht_oct_out[i];
             }
 
-            float x = get_min_array(debug_j);
-            // add_to_all(debug_j, minOctava);
-            if (counter >= 50)
+            // add minMax normelize
+            // if (counter >= 5)
+            // {
+            for (int i = 0; i < 8; i++)
             {
-                for (int i = 0; i < 8; i++)
-                {
-                    float added = debug_j[i]-x;
-                    Serial.print(added,6);
-                    Serial.print(" ");
-                }
-
-                Serial.println();
-                counter = 0;
+                float added = debug_j[i];
+                Serial.print(added, 7);
+                Serial.print(" ");
             }
 
-            counter++;
-            
+            Serial.println();
+            //     counter = 0;
+            // }
+
+            // counter++;
         }
 
-        // every 50th loop, adjust the volume accourding to the value on A2 (Pot)
-        // if (counter >= 200)
-        // {
-        //     // for (int i = 0; i < 7; i++)
-        //     // {
-        //     //     Serial.print(fht_oct_out[i]);
-        //     //     Serial.print(" ");
-        //     // }
-        //     // Serial.println();
-        //     counter=0;
-        // }
-
-        // counter++;
         // End of Fourier Transform code - output is stored in fht_oct_out[i].
-        //         float master_volume = 0.8; // float master_volume=(k+0.1)/1000 +.5;
+        // i=0-7 frequency (octave) bins (don't use 0 or 1), fht_oct_out[1]= amplitude of frequency for bin 1
+        // for loop a) removes background noise average and takes absolute value b) low / high pass filter as still very noisy
+        // c) maps amplitude of octave to a colour between blue and red d) sets pixel colour to amplitude of each frequency (octave)
+        // for (int i = 1; i < 8; i++)
+        // {
+        //     // goes through each octave. skip the first 1, which is not useful
+        //     float currOctv = oct_normal[i];
 
-        //         for (int i = 1; i < 12; i++)
+        //     // TODO: set lower bondery to value not sure
+        //     if (currOctv > 180) // High limit for octava to be considered
+        //     {
+        //         currOctv = 180;
+        //     }
+        //     else if (currOctv < 0) // Low limit for octava to be considered
+        //     {
+        //         currOctv = 0;
+        //     }
+        //     else
+        //     {
+        //         currOctv = currOctv;
+        //     }
+        //     {
+        //         if (i >= 7)
         //         {
-        //             noise_fact_adj[i] = noise_fact[i] * master_volume;
+        //             beat += 2;
         //         }
-        //         // i=0-7 frequency (octave) bins (don't use 0 or 1), fht_oct_out[1]= amplitude of frequency for bin 1
-        //         // for loop a) removes background noise average and takes absolute value b) low / high pass filter as still very noisy
-        //         // c) maps amplitude of octave to a colour between blue and red d) sets pixel colour to amplitude of each frequency (octave)
-        //         for (int i = 1; i < 12; i++)
-        //         { // goes through each octave. skip the first 1, which is not useful
+        //         else
+        //         {
+        //             beat += 1;
+        //         }
+        //     }
 
-        //             int j;
-        //             // Serial.print("noise stuff:");
-        //             j = (fht_oct_out[i] - noise[i]); // take the pink noise average level out, take the asbolute value to avoid negative numbers
-        //             if (j < 10)
+        //     // Serial.print(j);
+        //     prev_octv[i] = currOctv;
+
+        //     // this fills in 11 LED's with interpolated values between each of the 8 OCT values
+        //     int prev_oct_val;
+        //     if (i >= 2)
+        //     {
+        //         led_index = 2 * i - 3;
+        //         prev_oct_j = (j + prev_j[i - 1]) / 2;
+
+        //         saturation = constrain(j + 30, 0, 255);
+        //         saturation_prev = constrain(prev_oct_j + 30, 0, 255);
+        //         brightness = constrain(j, 0, 255);
+        //         brightness_prev = constrain(prev_oct_j, 0, 255);
+
+        //         if (brightness == 255)
+        //         {
+        //             saturation = 50;
+        //             brightness = 200;
+        //         }
+        //         if (brightness_prev == 255)
+        //         {
+        //             saturation_prev = 50;
+        //             brightness_prev = 200;
+        //         }
+
+        //         for (uint16_t y = 0; y < kMatrixHeight; y++)
+        //         {
+        //             leds[XY(led_index - 1, y)] = CHSV(j + y * 30, saturation, brightness);
+        //             if (i > 2)
         //             {
-        //                 j = 0;
-        //             }
-        //             j = j * noise_fact_adj[i];
-
-        //             if (j < 10)
-        //             {
-        //                 j = 0;
-        //             }
-        //             else
-        //             {
-        //                 j = j * noise_fact_adj[i];
-        //                 if (j > 180)
-        //                 {
-        //                     if (i >= 7)
-        //                     {
-        //                         beat += 2;
-        //                     }
-        //                     else
-        //                     {
-        //                         beat += 1;
-        //                     }
-        //                 }
-        //                 j = j / 30;
-        //                 j = j * 30; // (force it to more discrete values)
-        //             }
-
-        //             // Serial.print(j);
-        //             prev_j[i] = j;
-
-        //             // Serial.print(" ");
-
-        //             // this fills in 11 LED's with interpolated values between each of the 8 OCT values
-        //             if (i >= 2)
-        //             {
-        //                 led_index = 2 * i - 3;
         //                 prev_oct_j = (j + prev_j[i - 1]) / 2;
-
-        //                 saturation = constrain(j + 30, 0, 255);
-        //                 saturation_prev = constrain(prev_oct_j + 30, 0, 255);
-        //                 brightness = constrain(j, 0, 255);
-        //                 brightness_prev = constrain(prev_oct_j, 0, 255);
-
-        //                 if (brightness == 255)
-        //                 {
-        //                     saturation = 50;
-        //                     brightness = 200;
-        //                 }
-        //                 if (brightness_prev == 255)
-        //                 {
-        //                     saturation_prev = 50;
-        //                     brightness_prev = 200;
-        //                 }
-
-        //                 for (uint16_t y = 0; y < kMatrixHeight; y++)
-        //                 {
-        //                     leds[XY(led_index - 1, y)] = CHSV(j + y * 30, saturation, brightness);
-        //                     if (i > 2)
-        //                     {
-        //                         prev_oct_j = (j + prev_j[i - 1]) / 2;
-        //                         leds[XY(led_index - 2, y)] = CHSV(prev_oct_j + y * 30, saturation_prev, brightness_prev);
-        //                     }
-        //                 }
+        //                 leds[XY(led_index - 2, y)] = CHSV(prev_oct_j + y * 30, saturation_prev, brightness_prev);
         //             }
         //         }
+        //     }
+        // }
 
         //         // Serial.print("beat");
         //         // Serial.print(beat);
-        //         if (beat >= 12)
+        //         if (beat >= 7)
         //         {
         //             fill_solid(leds, NUM_LEDS, CRGB::Gray);
         //             FastLED.setBrightness(120);
@@ -303,43 +243,7 @@ void loop()
         //         counter++;
         //     }
         // }
-
-        // // Param for different pixel layouts
-        // const bool kMatrixSerpentineLayout = true;
-        // // Set 'kMatrixSerpentineLayout' to false if your pixels are
-        // // laid out all running the same way, like this:
-
-        // // Set 'kMatrixSerpentineLayout' to true if your pixels are
-        // // laid out back-and-forth, like this:
-
-        // uint16_t XY(uint8_t x, uint8_t y)
-        // {
-        //     uint16_t i;
-
-        //     if (kMatrixSerpentineLayout == false)
-        //     {
-        //         i = (y * kMatrixWidth) + x;
-        //     }
-
-        //     if (kMatrixSerpentineLayout == true)
-        //     {
-        //         if (y & 0x01)
-        //         {
-        //             // Odd rows run backwards
-        //             uint8_t reverseX = (kMatrixWidth - 1) - x;
-        //             i = (y * kMatrixWidth) + reverseX;
-        //         }
-        //         else
-        //         {
-        //             // Even rows run forwards
-        //             i = (y * kMatrixWidth) + x;
-        //         }
-        //     }
-
-        //     i = (i + counter2) % NUM_LEDS;
-        //     return i;
     }
-
 }
 
 float get_min_array(float i[])
@@ -355,9 +259,43 @@ float get_min_array(float i[])
     return min;
 }
 
-void add_to_all(float arr[],float add){
+void add_to_all(float arr[], float add)
+{
     for (int i = 0; i < 8; i++)
     {
         arr[i] += add;
     }
+}
+
+uint16_t XY(uint8_t x, uint8_t y)
+{
+    uint16_t i;
+
+    if (kMatrixSerpentineLayout == false)
+    {
+        i = (y * kMatrixWidth) + x;
+    }
+
+    if (kMatrixSerpentineLayout == true)
+    {
+        if (y & 0x01)
+        {
+            // Odd rows run backwards
+            uint8_t reverseX = (kMatrixWidth - 1) - x;
+            i = (y * kMatrixWidth) + reverseX;
+        }
+        else
+        {
+            // Even rows run forwards
+            i = (y * kMatrixWidth) + x;
+        }
+    }
+
+    i = (i + counter2) % NUM_LEDS;
+    return i;
+}
+
+float min_max_normalize(float value, float min, float max)
+{
+    return (value - min) / (max - min);
 }
