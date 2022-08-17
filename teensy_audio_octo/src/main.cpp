@@ -24,7 +24,7 @@ const unsigned int matrix_height = 32;
 const unsigned int myColor = 0x400020;
 
 // These parameters adjust the vertical thresholds
-const float maxLevel = 0.01;      // 1.0 = max, lower is more "sensitive"
+const float maxLevel = 0.8;     // 1.0 = max, lower is more "sensitive"
 const float dynamicRange = 40.0; // total range to display, in decibels
 const float linearBlend = 0.3;   // useful range is 0 to 0.7
 
@@ -38,9 +38,9 @@ CRGB fast_leds[ledsPerPin * 6];
 CTeensy4Controller<RGB, WS2811_800kHz> *pcontroller;
 
 // Audio library objects
-AudioInputAnalog adc1; // xy=99,55
-AudioAnalyzeFFT1024 fft;   // xy=265,75
-AudioOutputI2S i2s1;         // xy=378,99
+AudioInputAnalog adc1;   // xy=99,55
+AudioAnalyzeFFT1024 fft; // xy=265,75
+AudioOutputI2S i2s1;     // xy=378,99
 AudioConnection patchCord1(adc1, 0, i2s1, 0);
 AudioConnection patchCord2(adc1, 0, i2s1, 1);
 AudioConnection patchCord3(adc1, fft);
@@ -63,6 +63,12 @@ int frequencyBinsHorizontal[matrix_width] = {
     9, 9, 10, 10, 11, 12, 12, 13, 14, 15,
     15, 16, 17, 18, 19, 20, 22, 23, 24, 25};
 
+
+// fade hue params
+uint8_t currentHue = 0;
+uint8_t previousHue = 0;
+float animationSpeed = 0.3;
+
 // Run once from setup, the compute the vertical levels
 void computeVerticalLevels()
 {
@@ -77,6 +83,18 @@ void computeVerticalLevels()
     linearLevel = linearLevel * linearBlend;
     logLevel = logLevel * (1.0 - linearBlend);
     thresholdVertical[y] = (logLevel + linearLevel) * maxLevel;
+  }
+}
+
+uint8_t getHue(float level)
+{
+  for (unsigned int y = 0; y < matrix_height; y++)
+  {
+    float currentThreshold = thresholdVertical[y];
+    if (level > currentThreshold)
+    {
+      return y * 255 / matrix_height;
+    }
   }
 }
 
@@ -95,17 +113,16 @@ void setup()
   Serial.println("Setup yayyyyyy22222!!");
   // turn on the display
   leds.begin();
-	pcontroller = new CTeensy4Controller<RGB, WS2811_800kHz>(&leds);
+  pcontroller = new CTeensy4Controller<RGB, WS2811_800kHz>(&leds);
 
-	FastLED.addLeds(pcontroller, fast_leds, ledsPerPin * 6);
-	FastLED.setBrightness(84);
+  FastLED.addLeds(pcontroller, fast_leds, ledsPerPin * 6);
 
   // leds.show();
 
-//   Serial.println("Setup yayyyyyy33333!!");
-//   fill_solid(fast_leds, ledsPerPin * 6, CRGB::Red);
-//   FastLED.show();
-//   delay(10000);
+  //   Serial.println("Setup yayyyyyy33333!!");
+  //   fill_solid(fast_leds, ledsPerPin * 6, CRGB::Red);
+  //   FastLED.show();
+  //   delay(10000);
 }
 
 // A simple xy() function to turn display matrix coordinates
@@ -113,16 +130,11 @@ void setup()
 // are arranged differently, edit this code...
 unsigned int xy(unsigned int x, unsigned int y)
 {
-  if ((y & 1) == 0)
-  {
-    // even numbered rows (0, 2, 4...) are left to right
-    return y * matrix_width + x;
-  }
-  else
-  {
-    // odd numbered rows (1, 3, 5...) are right to left
-    return y * matrix_width + matrix_width - 1 - x;
-  }
+  Serial.print(x);
+  Serial.print(" ");
+  Serial.print(y);
+  Serial.println(" ");
+  return matrix_height - 1 - y;
 }
 
 // Run repetitively
@@ -137,7 +149,7 @@ void loop()
     // starting at low frequency
     freqBin = 0;
 
-    for (x = 0; x < matrix_width; x++)
+    for (x = 0; x < 1; x++)
     {
       // get the volume for each horizontal pixel position
       level = fft.read(freqBin, freqBin + frequencyBinsHorizontal[x] - 1);
@@ -145,17 +157,33 @@ void loop()
       Serial.print(level);
       Serial.print("  ");
 
+      // fill_rainbow(fast_leds, ledsPerPin * 6, CRGB::Red);
+      currentHue = getHue(level);
+
+      if (previousHue > currentHue)
+      {
+        currentHue = (previousHue - currentHue)*animationSpeed;
+      }
+      else
+      {
+        currentHue = (currentHue-previousHue)*animationSpeed;
+      }
+  
+      previousHue = currentHue;
+      fill_rainbow(fast_leds, matrix_height, currentHue);
+      FastLED.show();
+
       for (y = 0; y < matrix_height; y++)
       {
         // for each vertical pixel, check if above the threshold
         // and turn the LED on or off
         if (level >= thresholdVertical[y])
         {
-          leds.setPixel(xy(x, y), myColor);
+          // leds.setPixel(xy(x, y), myColor);
         }
         else
         {
-          leds.setPixel(xy(x, y), 0x000000);
+          // leds.setPixel(xy(x, y), 0x000000);
         }
       }
       // increment the frequency bin count, so we display
@@ -167,4 +195,3 @@ void loop()
     // Serial.println();
   }
 }
-
