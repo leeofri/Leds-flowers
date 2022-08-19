@@ -67,7 +67,7 @@ int frequencyBinsHorizontal[matrix_width] = {
 // fade hue params
 uint8_t currentHue = 0;
 uint8_t previousHue = 0;
-float animationSpeed = 0.3;
+float animationSpeed = 0.1;
 
 // Run once from setup, the compute the vertical levels
 void computeVerticalLevels()
@@ -149,7 +149,7 @@ void loop()
     // starting at low frequency
     freqBin = 0;
 
-    for (x = 0; x < 1; x++)
+    for (x = 30; x < 31; x++)
     {
       // get the volume for each horizontal pixel position
       level = fft.read(freqBin, freqBin + frequencyBinsHorizontal[x] - 1);
@@ -162,16 +162,17 @@ void loop()
 
       if (previousHue > currentHue)
       {
-        currentHue = (previousHue - currentHue)*animationSpeed;
+        currentHue = currentHue-100*animationSpeed;
       }
       else
       {
-        currentHue = (currentHue-previousHue)*animationSpeed;
+        currentHue = currentHue+100*animationSpeed;
       }
   
       previousHue = currentHue;
       fill_rainbow(fast_leds, matrix_height, currentHue);
       FastLED.show();
+      delay(10);
 
       for (y = 0; y < matrix_height; y++)
       {
