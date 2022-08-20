@@ -19,19 +19,20 @@
 #include <SPI.h>
 #include <makeColor.h>
 
+
 // The display size and color to use
 const unsigned int matrix_width = 60;
 const unsigned int matrix_height = 32;
 
 // max HSV color ( Blink )
-const float FadeMaxH = 330;
+const float FadeMaxH = 360;
 const float FadeMaxS = 100;
-const float FadeMaxV = 90;
+const float FadeMaxV = 80;
 
 // min HSV color ( Solid / base color ) 
-const float FadeMinH = 330;
+const float FadeMinH = 60;
 const float FadeMinS = 100;
-const float FadeMinV = 7;
+const float FadeMinV = 10;
 
 // current HSV color
 float currH = FadeMinH;
@@ -42,9 +43,10 @@ const unsigned int baseVal = 15;
 const unsigned int MyBlinkColor = HSVtoRGB(FadeMaxH, FadeMaxS, FadeMaxV);//0xe60073; // makeColor(330, 100, maxVal);//;
 const unsigned int myBaseColor = HSVtoRGB(FadeMinH, FadeMinS, FadeMinV); //0x000000;// 0x1a000d;//makeColor(330, 100, baseVal);//0x1a000d;
 float colorFadeFactor = 1.0; // 1 is none
+float colorChangeFactor = 50; // 1 is none
 
 // These parameters adjust the vertical thresholds
-const float maxLevel = 0.1;      // 1.0 = max, lower is more "sensitive"
+const float maxLevel = 0.06;      // 1.0 = max, lower is more "sensitive"
 const float dynamicRange = 40.0; // total range to display, in decibels
 const float linearBlend = 0.3;   // useful range is 0 to 0.7
 
@@ -115,21 +117,54 @@ void setup()
   // turn on the display
   leds.begin();
   pcontroller = new CTeensy4Controller<RGB, WS2811_800kHz>(&leds);
+}
 
-  // FastLED.addLeds(pcontroller, fast_leds, ledsPerPin * 6);
-  // FastLED.setBrightness(84);
-  // for (int i = 0; i < matrix_height; i++)
-  // {
-  //   Serial.print(thresholdVertical[i]);
-  //   Serial.print(" ");
+// retun int 0-360
+const int octavaNumber = 3;
+float octavaArr[octavaNumber] = {0, 0, 0};
+float prevOctavaArr[octavaNumber] = {0, 0, 0};
+const int octavaNumbersRange[octavaNumber+1] = {
+  0,
+  31,
+  134,
+  450};
+
+void getHueFromOctava(){
+  // for(int i = 0; i < octavaNumber; i++){
+  //   prevOctavaArr[i] = octavaArr[i];
+    // octavaArr[i] = fft.read(9, 10);
+     float levelOct =  fft.read(1, 6);
+
+     //amir
+      currH += levelOct / 5.0;
+      if(currH >= 360.0) {
+        currH -= 360.0;
+      }
+      Serial.println(levelOct / 5.0, 8);
+      return;
+     // end amir
+
+    // Serial.print(prevOctavaArr[i]);
+    // Serial.print(" ");
+    if (levelOct > thresholdVertical[10])
+    {
+       currH = currH + 0.001;
+       if (currH >= FadeMaxH)
+       {
+         currH = FadeMaxH;
+       }
+    }
+    else
+    {
+      currH = currH -  0.001;
+      if (currH <= FadeMinH)
+      {
+        currH = FadeMinH;
+    
+      }
+    }
+    Serial.println(currH);
   // }
-  // Serial.println("");
-  // leds.show();
-
-  //   Serial.println("Setup yayyyyyy33333!!");
-  // fill_solid(fast_leds, ledsPerPin * 6, CRGB::Red);
-  // FastLED.show();
-    // delay(10000);
 }
 
 // A simple xy() function to turn display matrix coordinates
@@ -156,6 +191,8 @@ void loop()
     {
       // get the volume for each horizontal pixel position
       level = fft.read(freqBin, freqBin + frequencyBinsHorizontal[x] - 1);
+      getHueFromOctava();
+      // level = fft.read(freqBin, freqBin + frequencyBinsHorizontal[x] - 1);
       // uncomment to see the spectrum in Arduino's Serial Monitor
       // Serial.print(level);
       // Serial.print("  ");
@@ -163,10 +200,11 @@ void loop()
       {
         // for each vertical pixel, check if above the threshold
         // and turn the LED on or off
+
         if (level >= thresholdVertical[15])
         {
           currV = FadeMaxV;
-          leds.setPixel(xy(x, y), MyBlinkColor);
+          leds.setPixel(xy(x, y), HSVtoRGB(currH,FadeMaxS,FadeMaxV));
         }
         else
         {
@@ -177,7 +215,7 @@ void loop()
             currV = FadeMinV;
           }
           
-          leds.setPixel(xy(x, y), HSVtoRGB(FadeMinH, FadeMinS, currV));
+          leds.setPixel(xy(x, y), HSVtoRGB(currH, FadeMinS, currV));
         }
       }
       // Serial.println(" ");
