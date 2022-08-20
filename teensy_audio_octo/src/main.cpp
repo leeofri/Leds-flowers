@@ -17,7 +17,7 @@
 #include <Wire.h>
 #include <SD.h>
 #include <SPI.h>
-// #include <makeColor.h>
+#include <makeColor.h>
 
 // The display size and color to use
 const unsigned int matrix_width = 60;
@@ -25,13 +25,13 @@ const unsigned int matrix_height = 32;
 const unsigned int maxVal = 45;
 const unsigned int baseVal = 15;
 const unsigned int myColor = 0xe60073; // makeColor(330, 100, maxVal);//;
-const unsigned int myBaseColor = 0x000000;// 0x1a000d;//makeColor(330, 100, baseVal);//0x1a000d;
+const unsigned int myBaseColor = HSVtoRGB(0.1,0.1,0.1); //0x000000;// 0x1a000d;//makeColor(330, 100, baseVal);//0x1a000d;
 int currColor = myBaseColor;
 float colorVal = 0.0;
 float colorFadeFactor = 8000.0;
 
 // These parameters adjust the vertical thresholds
-const float maxLevel = 0.1;      // 1.0 = max, lower is more "sensitive"
+const float maxLevel = 0.01;      // 1.0 = max, lower is more "sensitive"
 const float dynamicRange = 40.0; // total range to display, in decibels
 const float linearBlend = 0.3;   // useful range is 0 to 0.7
 
@@ -167,7 +167,7 @@ void loop()
           //   colorVal = baseVal;
           // }
           // currColor = makeColor(330, 100, int(colorVal));
-          leds.setPixel(xy(x, y), myColor);
+          leds.setPixel(xy(x, y), myBaseColor);
         }
       }
       // increment the frequency bin count, so we display
