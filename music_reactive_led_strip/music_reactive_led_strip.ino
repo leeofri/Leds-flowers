@@ -24,8 +24,7 @@ float noise_fact_adj[] = {15, 7, 1.5, 1, 1.2, 1.4, 1.7, 3}; // noise level deter
 
 
 // Params for width and height
-const uint8_t kMatrixWidth = 11;
-const uint8_t kMatrixHeight = 27;
+\
 #define NUM_LEDS (kMatrixWidth * kMatrixHeight)
 //#define NUM_LEDS    15
 
