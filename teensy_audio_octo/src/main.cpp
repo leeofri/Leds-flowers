@@ -22,16 +22,29 @@
 // The display size and color to use
 const unsigned int matrix_width = 60;
 const unsigned int matrix_height = 32;
-const unsigned int maxVal = 45;
+
+// max HSV color ( Blink )
+const float FadeMaxH = 330;
+const float FadeMaxS = 100;
+const float FadeMaxV = 90;
+
+// min HSV color ( Solid / base color ) 
+const float FadeMinH = 330;
+const float FadeMinS = 100;
+const float FadeMinV = 7;
+
+// current HSV color
+float currH = FadeMinH;
+float currS = FadeMinS;
+float currV = FadeMinV;
+
 const unsigned int baseVal = 15;
-const unsigned int myColor = 0xe60073; // makeColor(330, 100, maxVal);//;
-const unsigned int myBaseColor = HSVtoRGB(0.1,0.1,0.1); //0x000000;// 0x1a000d;//makeColor(330, 100, baseVal);//0x1a000d;
-int currColor = myBaseColor;
-float colorVal = 0.0;
-float colorFadeFactor = 8000.0;
+const unsigned int MyBlinkColor = HSVtoRGB(FadeMaxH, FadeMaxS, FadeMaxV);//0xe60073; // makeColor(330, 100, maxVal);//;
+const unsigned int myBaseColor = HSVtoRGB(FadeMinH, FadeMinS, FadeMinV); //0x000000;// 0x1a000d;//makeColor(330, 100, baseVal);//0x1a000d;
+float colorFadeFactor = 1.0; // 1 is none
 
 // These parameters adjust the vertical thresholds
-const float maxLevel = 0.01;      // 1.0 = max, lower is more "sensitive"
+const float maxLevel = 0.1;      // 1.0 = max, lower is more "sensitive"
 const float dynamicRange = 40.0; // total range to display, in decibels
 const float linearBlend = 0.3;   // useful range is 0 to 0.7
 
@@ -95,7 +108,6 @@ void setup()
   AudioMemory(30);
   sgtl5000_1.enable();
   sgtl5000_1.volume(0.5);
-  Serial.println("Setup yayyyyyy!!");
   // compute the vertical thresholds before starting
   computeVerticalLevels();
 
@@ -147,29 +159,28 @@ void loop()
       // uncomment to see the spectrum in Arduino's Serial Monitor
       // Serial.print(level);
       // Serial.print("  ");
-      
       for (y = 0; y < matrix_height; y++)
       {
         // for each vertical pixel, check if above the threshold
         // and turn the LED on or off
         if (level >= thresholdVertical[15])
         {
-          // colorVal = float(maxVal);
-          // currColor = makeColor(330, 100, colorVal);
-          leds.setPixel(xy(x, y), myColor);
+          currV = FadeMaxV;
+          leds.setPixel(xy(x, y), MyBlinkColor);
         }
         else
         {
-          // colorVal = colorVal - (maxVal-baseVal)/colorFadeFactor;
-          // //Serial.println(colorVal);
-          // if (colorVal < baseVal)
-          // {
-          //   colorVal = baseVal;
-          // }
-          // currColor = makeColor(330, 100, int(colorVal));
-          leds.setPixel(xy(x, y), myBaseColor);
+
+          currV = currV - (FadeMaxV-FadeMinV)/colorFadeFactor;
+          if (currV < FadeMinV)
+          {
+            currV = FadeMinV;
+          }
+          
+          leds.setPixel(xy(x, y), HSVtoRGB(FadeMinH, FadeMinS, currV));
         }
       }
+      // Serial.println(" ");
       // increment the frequency bin count, so we display
       // low to higher frequency from left to right
       freqBin = freqBin + frequencyBinsHorizontal[x];
