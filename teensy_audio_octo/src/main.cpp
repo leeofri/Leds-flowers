@@ -133,12 +133,28 @@ int minMaxNormalization(int value, int min, int max, int newMin, int newMax)
   return (value - min) * (newMax - newMin) / (max - min) + newMin;
 }
 
-int calcNextStepColor(int allLevels[matrix_width],float hue)
+const int LevelColorInfluant[matrix_width] = {
+  0,0,
+  12,12,12,12,12,12,12, // octave 0
+  10,10,10,10,10,10,10, // octave 1
+  8,8,8,8,8,8,8, // octave 2
+  8,8,8,8,8,8,8,
+  6,6,6,6,6,6,6,
+  6,6,6,6,6,6,6,
+  3,3,3,3,3,3,3,
+  3,3,3,3,3,3,3,
+  0,0
+  };
+int calcNextStepColor(int allLevels[matrix_width], float hue)
 {
-  int nextHue=0;
-  for (int i=0; i<matrix_width; i++)
+  int nextHue = 0;
+  for (int i = 0; i < matrix_width; i++)
   {
-   nextHue += minMaxNormalization(allLevels[i], 0, matrix_height, 0, 6);
+    nextHue += minMaxNormalization(allLevels[i], 0, matrix_height, 0,  LevelColorInfluant[i]);
+  }
+  
+  if (nextHue > 360){
+    nextHue = 360;
   }
 
   return nextHue;
