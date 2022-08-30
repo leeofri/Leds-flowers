@@ -49,7 +49,7 @@ int makeColor(unsigned int hue, unsigned int saturation, unsigned int lightness)
 int HSVtoRGB(float H, float S,float V){
     if(H>360 || H<0 || S>100 || S<0 || V>100 || V<0)
     {
-        return;
+        return 0;
     }
     float s = S/100;
     float v = V/100;
@@ -79,6 +79,10 @@ int HSVtoRGB(float H, float S,float V){
     unsigned int R = (r+m)*255;
     unsigned int G = (g+m)*255;
     unsigned int B = (b+m)*255;
+
+    if (R > 255) R = 255;
+    if (G > 255) G = 255;
+    if (B > 255) B = 255;
 
     return (R << 16) | (G << 8) | B;
 }
