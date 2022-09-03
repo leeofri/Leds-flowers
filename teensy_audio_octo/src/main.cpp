@@ -145,7 +145,7 @@ const int LevelColorInfluant[numberOfFrequencies] = {
 int calcNextStepColor(int allLevels[numberOfFrequencies], float hue)
 {
   int nextHue = 0;
-  for (int i = 0; i < numberOfFrequencies; i++)
+  for (unsigned int i = 0; i < numberOfFrequencies; i++)
   {
     nextHue += minMaxNormalization(allLevels[i] * 0.6, 0, levelsPerFrequency, 0, LevelColorInfluant[i]);
   }
