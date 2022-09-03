@@ -49,7 +49,7 @@ void setupAudio()
     fillFrequencyBinsIndices();
 }
 
-bool audioAvalable()
+bool isAudioAvailable()
 {
     return fft.available();
 }

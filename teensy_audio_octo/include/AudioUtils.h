@@ -2,7 +2,7 @@
 #define __AUDIO_UTILS_H__
 
 void setupAudio();
-bool audioAvalable();
+bool isAudioAvailable();
 
 // read and return a single level for a givin frequency index.
 // the frequency index is an aggregation of multiple fft bins.

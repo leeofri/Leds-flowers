@@ -177,7 +177,7 @@ unsigned int xy(unsigned int x, unsigned int y)
 // Run repetitively
 void loop()
 {
-  if (!audioAvalable())
+  if (!isAudioAvailable())
   {
     return;
   }
