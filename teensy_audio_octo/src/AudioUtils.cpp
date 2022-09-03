@@ -23,7 +23,7 @@ int frequencyBinsIndices[matrix_width + 1] = {0};
 // Audio library objects
 AudioInputAnalog adc1;   // xy=99,55
 AudioAnalyzeFFT1024 fft; // xy=265,75
-AudioOutputI2S i2s1;     // xy=378,99
+AudioOutputI2S2 i2s1;     // xy=378,99
 AudioConnection patchCord1(adc1, 0, i2s1, 0);
 AudioConnection patchCord2(adc1, 0, i2s1, 1);
 AudioConnection patchCord3(adc1, fft);
@@ -44,7 +44,7 @@ void setupAudio()
 {
     AudioMemory(30);
     sgtl5000_1.enable();
-    sgtl5000_1.volume(0.5);
+    sgtl5000_1.volume(1.0);
 
     fillFrequencyBinsIndices();
 }

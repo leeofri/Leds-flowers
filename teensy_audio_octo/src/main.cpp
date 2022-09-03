@@ -37,9 +37,11 @@ const unsigned int baseVal = 15;
 float colorFadeFactor = 1.0; // 1 is none
 
 // These parameters adjust the vertical thresholds
-float maxLevel = 0.001;          // 1.0 = max, lower is more "sensitive"
+float maxLevel = 0.1;          // 1.0 = max, lower is more "sensitive"
+float LevelColorInfluantSenstativity = 0.9;
+float colorRangeFactor = 0.1; // 0-1 when 1 is the fastets change betwwen colors
 const float dynamicRange = 40.0; // total range to display, in decibels
-const float linearBlend = 0.5;   // useful range is 0 to 0.7
+const float linearBlend = 0.3;   // useful range is 0 to 0.7
 
 // OctoWS2811 objects
 const int bytesPerLed = 3;
@@ -77,7 +79,6 @@ void computeVerticalLevels()
 const int POT_PIN_SENSATIVITY = 3;
 const int POT_PIN_COLOR = 4;
 float prevPotValSensativity = maxLevel;
-float colorRangeFactor = 1;
 
 int analogReadZeroToOne(int pin)
 {
@@ -112,6 +113,12 @@ void setup()
   // compute the vertical thresholds before starting
   computeVerticalLevels();
 
+  Serial.print("computeVerticalLevels:");
+  for (int i = 0; i < matrix_height; i++)
+  {
+    Serial.print(thresholdVertical[i]);
+    Serial.print(",");
+  }
   Serial.println("Setup yayyyyyy22222!!");
   // turn on the display
   leds.begin();
@@ -132,15 +139,16 @@ int minMaxNormalization(int value, int min, int max, int newMin, int newMax)
   return (value - min) * (newMax - newMin) / (max - min) + newMin;
 }
 
+
 const int LevelColorInfluant[matrix_width] = {
-  12,12,
+  0,0,
   12,12,12,12,12,12,12, 
-  10,10,10,10,10,10,10, 
-  10,10,10,10,10,10,10, 
-  8,8,8,8,8,8,8,
-  6,6,6,6,6,6,6,
-  6,6,6,6,6,6,6,
-  4,4,4,4,4,4,4,
+  8,8,8,8,8,8,8, 
+  8,8,8,8,8,8,8, 
+  5,5,5,5,5,5,5,
+  5,5,5,5,5,5,5,
+  5,5,5,5,5,5,5,
+  2,2,2,2,2,2,2,
   2,2,2,2,2,2,2,
   1,1
   };
@@ -149,7 +157,7 @@ int calcNextStepColor(int allLevels[matrix_width], float hue)
   int nextHue = 0;
   for (int i = 0; i < matrix_width; i++)
   {
-    nextHue += minMaxNormalization(allLevels[i] * 0.6, 0, matrix_height, 0, LevelColorInfluant[i]);
+    nextHue += minMaxNormalization(allLevels[i] * 0.4, 0, matrix_height, 0, LevelColorInfluant[i]);
   }
 
   nextHue = (colorRangeFactor * nextHue) + (1.0 - colorRangeFactor) * hue;
@@ -216,7 +224,7 @@ void loop()
         int color = HSVtoRGB(currH, FadeMaxS, FadeMaxV);
         // Serial.print(currH);
         // Serial.print(" ");
-        leds.setPixel(xy(frequency, y), color);
+        leds.setPixel(xy8FlowersSpred(frequency, y), color);
       }
       else
       {
@@ -229,7 +237,7 @@ void loop()
         int color = HSVtoRGB(currH, FadeMinS, FadeMinV);
         // Serial.print(color);
         // Serial.print(" ");
-        leds.setPixel(xy(frequency, y), color);
+        leds.setPixel(xy8FlowersSpred(frequency, y), color);
       }
       // Serial.println(" ");
     }
@@ -239,8 +247,8 @@ void loop()
   }
 
   currH = calcNextStepColor(allLevelsPassThreshold, currH);
-  Serial.print(currH);
-  Serial.println(" ");
+  // Serial.print(currH);
+  // Serial.println(" ");
   // after all pixels set, show them all at the same instant
   leds.show();
 }
