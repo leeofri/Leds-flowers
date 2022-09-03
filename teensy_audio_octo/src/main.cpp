@@ -204,11 +204,10 @@ unsigned int xy(unsigned int x, unsigned int y)
 
 // A xy() function to turn display matrix coordinates for 8 flowers into the index numbers OctoWS2811 requires.
 // for spred close level in similar high on the flower
-const unsigned int FLOWER_NUMBER = 8;
 unsigned int xy8FlowersSpred(unsigned int x, unsigned int y)
 {
-  unsigned int currPos = ((y * (FLOWER_NUMBER-1))%matrix_height * matrix_width)+ x;
-  Serial.println(currPos);
+  unsigned int currPos = ((y * (numPins-1))%matrix_height * matrix_width)+ x;
+  // Serial.println(currPos);
   return currPos;
 }
 
