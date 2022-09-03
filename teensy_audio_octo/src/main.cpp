@@ -30,8 +30,6 @@ const float FadeMinV = 6;
 
 // current HSV color
 float currH = FadeMinH;
-float currS = FadeMinS;
-float currV = FadeMinV;
 
 const unsigned int baseVal = 15;
 float colorFadeFactor = 1.0; // 1 is none
@@ -43,7 +41,7 @@ const float linearBlend = 0.5;   // useful range is 0 to 0.7
 
 // OctoWS2811 objects
 const int bytesPerLed = 3;
-const int ledsPerStrip = matrix_width * matrix_height / 8;
+const int ledsPerStrip = numberOfFrequencies * levelsPerFrequency / 8;
 const int numPins = 8;
 
 DMAMEM int displayMemory[ledsPerStrip * numPins * bytesPerLed / 4];
@@ -54,7 +52,7 @@ OctoWS2811 leds(ledsPerStrip, displayMemory, drawingMemory, config);
 // This array holds the volume level (0 to 1.0) for each
 // vertical pixel to turn on.  Computed in setup() using
 // the 3 parameters above.
-float thresholdVertical[matrix_height];
+float thresholdVertical[levelsPerFrequency];
 
 // Run once from setup, the compute the vertical levels
 void computeVerticalLevels()
@@ -62,9 +60,9 @@ void computeVerticalLevels()
   unsigned int y;
   float n, logLevel, linearLevel;
 
-  for (y = 0; y < matrix_height; y++)
+  for (y = 0; y < levelsPerFrequency; y++)
   {
-    n = (float)y / (float)(matrix_height - 1);
+    n = (float)y / (float)(levelsPerFrequency - 1);
     logLevel = pow10f(n * -1.0 * (dynamicRange / 20.0));
     linearLevel = 1.0 - n;
     linearLevel = linearLevel * linearBlend;
@@ -132,7 +130,7 @@ int minMaxNormalization(int value, int min, int max, int newMin, int newMax)
   return (value - min) * (newMax - newMin) / (max - min) + newMin;
 }
 
-const int LevelColorInfluant[matrix_width] = {
+const int LevelColorInfluant[numberOfFrequencies] = {
   12,12,
   12,12,12,12,12,12,12, 
   10,10,10,10,10,10,10, 
@@ -144,12 +142,12 @@ const int LevelColorInfluant[matrix_width] = {
   2,2,2,2,2,2,2,
   1,1
   };
-int calcNextStepColor(int allLevels[matrix_width], float hue)
+int calcNextStepColor(int allLevels[numberOfFrequencies], float hue)
 {
   int nextHue = 0;
-  for (int i = 0; i < matrix_width; i++)
+  for (unsigned int i = 0; i < numberOfFrequencies; i++)
   {
-    nextHue += minMaxNormalization(allLevels[i] * 0.6, 0, matrix_height, 0, LevelColorInfluant[i]);
+    nextHue += minMaxNormalization(allLevels[i] * 0.6, 0, levelsPerFrequency, 0, LevelColorInfluant[i]);
   }
 
   nextHue = (colorRangeFactor * nextHue) + (1.0 - colorRangeFactor) * hue;
@@ -172,14 +170,14 @@ int calcNextStepColor(int allLevels[matrix_width], float hue)
 // are arranged differently, edit this code...
 unsigned int xy(unsigned int x, unsigned int y)
 {
-  return y * matrix_width + x;
+  return y * numberOfFrequencies + x;
 }
 
 // A xy() function to turn display matrix coordinates for 8 flowers into the index numbers OctoWS2811 requires.
 // for spred close level in similar high on the flower
 unsigned int xy8FlowersSpred(unsigned int x, unsigned int y)
 {
-  unsigned int currPos = ((y * (numPins-1))%matrix_height * matrix_width)+ x;
+  unsigned int currPos = ((y * (numPins-1))%levelsPerFrequency * numberOfFrequencies)+ x;
   // Serial.println(currPos);
   return currPos;
 }
@@ -193,49 +191,37 @@ void loop()
     return;
   }
 
-  int allLevelsPassThreshold[matrix_width] = {0};
+  int allLevelsPassThreshold[numberOfFrequencies] = {0};
 
   allLevelsPassThreshold[0] = 0; // TODO: reset all array
 
-  for (unsigned int frequency = 0; frequency < matrix_width; frequency++)
+  for (unsigned int frequency = 0; frequency < numberOfFrequencies; frequency++)
   {
     // get the volume for each horizontal pixel position
-    float level = readFrequencyLevel(frequency);
+    float currLevelRead = readFrequencyLevel(frequency);
 
     // uncomment to see the spectrum in Arduino's Serial Monitor
-    // Serial.print(level);
+    // Serial.print(currLevelRead);
     // Serial.print("  ");
-    for (unsigned int y = 0; y < matrix_height; y++)
+    for (unsigned int level = 0; level < levelsPerFrequency; level++)
     {
       // for each vertical pixel, check if above the threshold
       // and turn the LED on or off
-      if (level >= thresholdVertical[y])
+      unsigned int octoIndex = xy(frequency, level);
+      if (currLevelRead >= thresholdVertical[level])
       {
         allLevelsPassThreshold[frequency] += 1;
-        currV = FadeMaxV;
         int color = HSVtoRGB(currH, FadeMaxS, FadeMaxV);
-        // Serial.print(currH);
-        // Serial.print(" ");
-        leds.setPixel(xy(frequency, y), color);
+        leds.setPixel(octoIndex, color);
       }
       else
       {
-        currV = currV - (FadeMaxV - FadeMinV) / colorFadeFactor;
-        if (currV < FadeMinV)
-        {
-          currV = FadeMinV;
-        }
-
         int color = HSVtoRGB(currH, FadeMinS, FadeMinV);
-        // Serial.print(color);
-        // Serial.print(" ");
-        leds.setPixel(xy(frequency, y), color);
+        leds.setPixel(octoIndex, color);
       }
       // Serial.println(" ");
     }
     // Serial.println(" ");
-    // increment the frequency bin count, so we display
-    // low to higher frequency from left to right
   }
 
   currH = calcNextStepColor(allLevelsPassThreshold, currH);
