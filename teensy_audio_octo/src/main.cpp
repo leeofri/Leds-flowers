@@ -133,16 +133,17 @@ int minMaxNormalization(int value, int min, int max, int newMin, int newMax)
 }
 
 const int LevelColorInfluant[matrix_width] = {
-    0, 0,
-    12, 12, 12, 12, 12, 12, 12, // octave 0
-    10, 10, 10, 10, 10, 10, 10, // octave 1
-    8, 8, 8, 8, 8, 8, 8,        // octave 2
-    8, 8, 8, 8, 8, 8, 8,
-    6, 6, 6, 6, 6, 6, 6,
-    6, 6, 6, 6, 6, 6, 6,
-    4, 4, 4, 4, 4, 4, 4,
-    4, 4, 4, 4, 4, 4, 4,
-    3, 0};
+  12,12,
+  12,12,12,12,12,12,12, 
+  10,10,10,10,10,10,10, 
+  10,10,10,10,10,10,10, 
+  8,8,8,8,8,8,8,
+  6,6,6,6,6,6,6,
+  6,6,6,6,6,6,6,
+  4,4,4,4,4,4,4,
+  2,2,2,2,2,2,2,
+  1,1
+  };
 int calcNextStepColor(int allLevels[matrix_width], float hue)
 {
   int nextHue = 0;
@@ -173,6 +174,16 @@ unsigned int xy(unsigned int x, unsigned int y)
 {
   return y * matrix_width + x;
 }
+
+// A xy() function to turn display matrix coordinates for 8 flowers into the index numbers OctoWS2811 requires.
+// for spred close level in similar high on the flower
+unsigned int xy8FlowersSpred(unsigned int x, unsigned int y)
+{
+  unsigned int currPos = ((y * (numPins-1))%matrix_height * matrix_width)+ x;
+  // Serial.println(currPos);
+  return currPos;
+}
+
 
 // Run repetitively
 void loop()
