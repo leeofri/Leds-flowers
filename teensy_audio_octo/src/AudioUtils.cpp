@@ -7,7 +7,7 @@
 // to use for each horizontal pixel.  Because humans hear
 // in octaves and FFT bins are linear, the low frequencies
 // use a small number of bins, higher frequencies use more.
-int frequencyBinsHorizontal[matrix_width] = {
+int frequencyBinsHorizontal[numberOfFrequencies] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     2, 2, 2, 2, 2, 2, 2, 2, 2, 3,
     3, 3, 3, 3, 4, 4, 4, 4, 4, 5,
@@ -15,10 +15,10 @@ int frequencyBinsHorizontal[matrix_width] = {
     9, 9, 10, 10, 11, 12, 12, 13, 14, 15,
     15, 16, 17, 18, 19, 20, 22, 23, 24, 25};
 
-// this array maps from fft bins, to frequencies in the range [0, matrix_width].
+// this array maps from fft bins, to frequencies in the range [0, numberOfFrequencies].
 // each index is a single frequency, and the value is the corespending startBin.
 // we calculate it once and access it fast by index
-int frequencyBinsIndices[matrix_width + 1] = {0};
+int frequencyBinsIndices[numberOfFrequencies + 1] = {0};
 
 // Audio library objects
 AudioInputAnalog adc1;   // xy=99,55
@@ -33,7 +33,7 @@ void fillFrequencyBinsIndices()
 {
     int sum = 0;
     frequencyBinsIndices[0] = 0;
-    for (unsigned int frequencyIndex = 0; frequencyIndex < matrix_width; frequencyIndex++)
+    for (unsigned int frequencyIndex = 0; frequencyIndex < numberOfFrequencies; frequencyIndex++)
     {
         sum += frequencyBinsHorizontal[frequencyIndex];
         frequencyBinsIndices[frequencyIndex + 1] = sum;
