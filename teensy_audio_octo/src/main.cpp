@@ -12,16 +12,11 @@
 // This example code is in the public domain.
 
 // #include <OctoWS2811.h>
-#include <Audio.h>
 #include <Wire.h>
-#include <SD.h>
-#include <SPI.h>
 #include <ColorUtils.h>
+#include <AudioUtils.h>
 #include <OctoWS2811.h>
-
-// The display size and color to use
-const unsigned int matrix_width = 60;
-const unsigned int matrix_height = 40;
+#include <Config.h>
 
 // max HSV color ( Blink )
 const float FadeMaxH = 360;
@@ -56,31 +51,10 @@ int drawingMemory[ledsPerStrip * numPins * bytesPerLed / 4];
 const int config = WS2811_GRB | WS2811_800kHz;
 OctoWS2811 leds(ledsPerStrip, displayMemory, drawingMemory, config);
 
-// Audio library objects
-AudioInputAnalog adc1;   // xy=99,55
-AudioAnalyzeFFT1024 fft; // xy=265,75
-AudioOutputI2S i2s1;     // xy=378,99
-AudioConnection patchCord1(adc1, 0, i2s1, 0);
-AudioConnection patchCord2(adc1, 0, i2s1, 1);
-AudioConnection patchCord3(adc1, fft);
-AudioControlSGTL5000 sgtl5000_1; // xy=265,161
-
 // This array holds the volume level (0 to 1.0) for each
 // vertical pixel to turn on.  Computed in setup() using
 // the 3 parameters above.
 float thresholdVertical[matrix_height];
-
-// This array specifies how many of the FFT frequency bin
-// to use for each horizontal pixel.  Because humans hear
-// in octaves and FFT bins are linear, the low frequencies
-// use a small number of bins, higher frequencies use more.
-int frequencyBinsHorizontal[matrix_width] = {
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 3,
-    3, 3, 3, 3, 4, 4, 4, 4, 4, 5,
-    5, 5, 6, 6, 6, 7, 7, 7, 8, 8,
-    9, 9, 10, 10, 11, 12, 12, 13, 14, 15,
-    15, 16, 17, 18, 19, 20, 22, 23, 24, 25};
 
 // Run once from setup, the compute the vertical levels
 void computeVerticalLevels()
@@ -132,10 +106,9 @@ void ApplyPotentiometerSettings()
 void setup()
 {
   Serial.begin(115200);
+  setupAudio();
+
   // the audio library needs to be given memory to start working
-  AudioMemory(30);
-  sgtl5000_1.enable();
-  sgtl5000_1.volume(0.5);
   // compute the vertical thresholds before starting
   computeVerticalLevels();
 
@@ -215,25 +188,20 @@ unsigned int xy8FlowersSpred(unsigned int x, unsigned int y)
 // Run repetitively
 void loop()
 {
-  if (!fft.available())
+  if (!isAudioAvailable())
   {
     return;
   }
 
-  float level;
   int allLevelsPassThreshold[matrix_width] = {0};
 
-  // freqBin counts which FFT frequency data has been used,
-  // starting at low frequency
-  unsigned int freqBin = 0;
   allLevelsPassThreshold[0] = 0; // TODO: reset all array
 
-  for (unsigned int x = 0; x < matrix_width; x++)
+  for (unsigned int frequency = 0; frequency < matrix_width; frequency++)
   {
     // get the volume for each horizontal pixel position
-    level = fft.read(freqBin, freqBin + frequencyBinsHorizontal[x] - 1);
+    float level = readFrequencyLevel(frequency);
 
-    // level = fft.read(freqBin, freqBin + frequencyBinsHorizontal[x] - 1);
     // uncomment to see the spectrum in Arduino's Serial Monitor
     // Serial.print(level);
     // Serial.print("  ");
@@ -243,12 +211,12 @@ void loop()
       // and turn the LED on or off
       if (level >= thresholdVertical[y])
       {
-        allLevelsPassThreshold[x] += 1;
+        allLevelsPassThreshold[frequency] += 1;
         currV = FadeMaxV;
         int color = HSVtoRGB(currH, FadeMaxS, FadeMaxV);
         // Serial.print(currH);
         // Serial.print(" ");
-        leds.setPixel(xy(x, y), color);
+        leds.setPixel(xy(frequency, y), color);
       }
       else
       {
@@ -261,14 +229,13 @@ void loop()
         int color = HSVtoRGB(currH, FadeMinS, FadeMinV);
         // Serial.print(color);
         // Serial.print(" ");
-        leds.setPixel(xy(x, y), color);
+        leds.setPixel(xy(frequency, y), color);
       }
       // Serial.println(" ");
     }
     // Serial.println(" ");
     // increment the frequency bin count, so we display
     // low to higher frequency from left to right
-    freqBin = freqBin + frequencyBinsHorizontal[x];
   }
 
   currH = calcNextStepColor(allLevelsPassThreshold, currH);
