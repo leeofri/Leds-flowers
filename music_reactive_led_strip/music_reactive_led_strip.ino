@@ -24,8 +24,7 @@ float noise_fact_adj[] = {15, 7, 1.5, 1, 1.2, 1.4, 1.7, 3}; // noise level deter
 
 
 // Params for width and height
-const uint8_t kMatrixWidth = 11;
-const uint8_t kMatrixHeight = 27;
+\
 #define NUM_LEDS (kMatrixWidth * kMatrixHeight)
 //#define NUM_LEDS    15
 
@@ -56,7 +55,6 @@ void setup() {
 void loop() {
   int prev_j[8];
   int beat = 0;
-  int prev_oct_j;
   int counter = 0;
   int prev_beat = 0;
   int led_index = 0;
@@ -133,14 +131,15 @@ void loop() {
 
 
       // this fills in 11 LED's with interpolated values between each of the 8 OCT values
+      int prev_oct_val;
       if (i >= 2) {
         led_index = 2 * i - 3;
-        prev_oct_j = (j + prev_j[i - 1]) / 2;
+        prev_oct_val = (j + prev_j[i - 1]) / 2;
 
         saturation = constrain(j + 30, 0, 255);
-        saturation_prev = constrain(prev_oct_j + 30, 0, 255);
+        saturation_prev = constrain(prev_oct_val + 30, 0, 255);
         brightness = constrain(j, 0, 255);
-        brightness_prev = constrain(prev_oct_j, 0, 255);
+        brightness_prev = constrain(prev_oct_val, 0, 255);
         if (brightness == 255) {
           saturation = 50;
           brightness = 200;
@@ -154,8 +153,8 @@ void loop() {
         for (uint8_t y = 0; y < kMatrixHeight; y++) {
           leds[XY(led_index - 1, y)] = CHSV(j + y * 30, saturation, brightness);
           if (i > 2) {
-            prev_oct_j = (j + prev_j[i - 1]) / 2;
-            leds[ XY(led_index - 2, y)] = CHSV(prev_oct_j + y * 30, saturation_prev, brightness_prev);
+            prev_oct_val = (j + prev_j[i - 1]) / 2;
+            leds[ XY(led_index - 2, y)] = CHSV(prev_oct_val + y * 30, saturation_prev, brightness_prev);
           }
         }
       }
@@ -164,12 +163,7 @@ void loop() {
 
 
     if (beat >= 7) {
-      fill_solid(leds, NUM_LEDS, CRGB::Gray);
-      FastLED.setBrightness(120);
-
-
-      //    FastLED.setBrightness(200);
-
+      FastLED.setBrightness(200);
     }
     else {
       if (prev_beat != beat) {
