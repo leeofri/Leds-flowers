@@ -193,16 +193,6 @@ int calcNextStepColor(int allLevels[matrix_width], float hue)
   return nextHue;
 }
 
-void getHueFromOctava()
-{
-  float levelOct = fft.read(1, 6);
-  currH += levelOct / 5.0;
-  if (currH >= 360.0)
-  {
-    currH -= 360.0;
-  }
-}
-
 // A simple xy() function to turn display matrix coordinates
 // into the index numbers OctoWS2811 requires.  If your LEDs
 // are arranged differently, edit this code...
@@ -232,7 +222,6 @@ void loop()
     // get the volume for each horizontal pixel position
     level = fft.read(freqBin, freqBin + frequencyBinsHorizontal[x] - 1);
 
-    // getHueFromOctava();
     // level = fft.read(freqBin, freqBin + frequencyBinsHorizontal[x] - 1);
     // uncomment to see the spectrum in Arduino's Serial Monitor
     // Serial.print(level);
