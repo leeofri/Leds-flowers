@@ -12,12 +12,12 @@
 // This example code is in the public domain.
 
 // #include <OctoWS2811.h>
-#include <Fast_octo_LED.h>
 #include <Audio.h>
 #include <Wire.h>
 #include <SD.h>
 #include <SPI.h>
-#include <makeColor.h>
+#include <ColorUtils.h>
+#include <OctoWS2811.h>
 
 // The display size and color to use
 const unsigned int matrix_width = 60;
@@ -39,12 +39,10 @@ float currS = FadeMinS;
 float currV = FadeMinV;
 
 const unsigned int baseVal = 15;
-const unsigned int MyBlinkColor = HSVtoRGB(FadeMaxH, FadeMaxS, FadeMaxV); // 0xe60073; // makeColor(330, 100, maxVal);//;
-const unsigned int myBaseColor = HSVtoRGB(FadeMinH, FadeMinS, FadeMinV);  // 0x000000;// 0x1a000d;//makeColor(330, 100, baseVal);//0x1a000d;
-float colorFadeFactor = 1.0;                                              // 1 is none                                        // 1 is none
+float colorFadeFactor = 1.0; // 1 is none
 
 // These parameters adjust the vertical thresholds
-float maxLevel = 0.001;     // 1.0 = max, lower is more "sensitive"
+float maxLevel = 0.001;          // 1.0 = max, lower is more "sensitive"
 const float dynamicRange = 40.0; // total range to display, in decibels
 const float linearBlend = 0.5;   // useful range is 0 to 0.7
 
@@ -52,14 +50,11 @@ const float linearBlend = 0.5;   // useful range is 0 to 0.7
 const int bytesPerLed = 3;
 const int ledsPerStrip = matrix_width * matrix_height / 8;
 const int numPins = 8;
-byte pinList[numPins] = {2, 3, 4, 5, 6, 7, 8, 9};
 
 DMAMEM int displayMemory[ledsPerStrip * numPins * bytesPerLed / 4];
 int drawingMemory[ledsPerStrip * numPins * bytesPerLed / 4];
 const int config = WS2811_GRB | WS2811_800kHz;
 OctoWS2811 leds(ledsPerStrip, displayMemory, drawingMemory, config);
-CRGB fast_leds[ledsPerStrip * numPins * bytesPerLed / 4];
-CTeensy4Controller<RGB, WS2811_800kHz> *pcontroller;
 
 // Audio library objects
 AudioInputAnalog adc1;   // xy=99,55
@@ -147,7 +142,6 @@ void setup()
   Serial.println("Setup yayyyyyy22222!!");
   // turn on the display
   leds.begin();
-  pcontroller = new CTeensy4Controller<RGB, WS2811_800kHz>(&leds);
 }
 
 // retun int 0-360
@@ -166,32 +160,33 @@ int minMaxNormalization(int value, int min, int max, int newMin, int newMax)
 }
 
 const int LevelColorInfluant[matrix_width] = {
-  0,0,
-  12,12,12,12,12,12,12, // octave 0
-  10,10,10,10,10,10,10, // octave 1
-  8,8,8,8,8,8,8, // octave 2
-  8,8,8,8,8,8,8,
-  6,6,6,6,6,6,6,
-  6,6,6,6,6,6,6,
-  4,4,4,4,4,4,4,
-  4,4,4,4,4,4,4,
-  3,0
-  };
+    0, 0,
+    12, 12, 12, 12, 12, 12, 12, // octave 0
+    10, 10, 10, 10, 10, 10, 10, // octave 1
+    8, 8, 8, 8, 8, 8, 8,        // octave 2
+    8, 8, 8, 8, 8, 8, 8,
+    6, 6, 6, 6, 6, 6, 6,
+    6, 6, 6, 6, 6, 6, 6,
+    4, 4, 4, 4, 4, 4, 4,
+    4, 4, 4, 4, 4, 4, 4,
+    3, 0};
 int calcNextStepColor(int allLevels[matrix_width], float hue)
 {
   int nextHue = 0;
   for (int i = 0; i < matrix_width; i++)
   {
-    nextHue += minMaxNormalization(allLevels[i]*0.6, 0, matrix_height, 0,  LevelColorInfluant[i]);
+    nextHue += minMaxNormalization(allLevels[i] * 0.6, 0, matrix_height, 0, LevelColorInfluant[i]);
   }
 
   nextHue = (colorRangeFactor * nextHue) + (1.0 - colorRangeFactor) * hue;
-  
-  if (nextHue > FadeMaxH){
+
+  if (nextHue > FadeMaxH)
+  {
     nextHue = FadeMaxH;
   }
 
-   if (nextHue < FadeMinH){
+  if (nextHue < FadeMinH)
+  {
     nextHue = FadeMinH;
   }
 
@@ -200,40 +195,12 @@ int calcNextStepColor(int allLevels[matrix_width], float hue)
 
 void getHueFromOctava()
 {
-  // for(int i = 0; i < octavaNumber; i++){
-  //   prevOctavaArr[i] = octavaArr[i];
-  // octavaArr[i] = fft.read(9, 10);
   float levelOct = fft.read(1, 6);
-  // amir
   currH += levelOct / 5.0;
   if (currH >= 360.0)
   {
     currH -= 360.0;
   }
-  // Serial.println(currH, 8);
-  return;
-  // end amir
-
-  // Serial.print(prevOctavaArr[i]);
-  // Serial.print(" ");
-  if (levelOct > thresholdVertical[14])
-  {
-    currH = currH + 0.001;
-    if (currH >= FadeMaxH)
-    {
-      currH = FadeMaxH;
-    }
-  }
-  else
-  {
-    currH = currH - 0.001;
-    if (currH <= FadeMinH)
-    {
-      currH = FadeMinH;
-    }
-  }
-  // Serial.println(currH);
-  // }
 }
 
 // A simple xy() function to turn display matrix coordinates
@@ -247,71 +214,66 @@ unsigned int xy(unsigned int x, unsigned int y)
 // Run repetitively
 void loop()
 {
-  unsigned int x, y, freqBin;
+  if (!fft.available())
+  {
+    return;
+  }
+
   float level;
   int allLevelsPassThreshold[matrix_width] = {0};
 
-  // ApplyPotentiometerSettings();
+  // freqBin counts which FFT frequency data has been used,
+  // starting at low frequency
+  unsigned int freqBin = 0;
+  allLevelsPassThreshold[0] = 0; // TODO: reset all array
 
-  if (fft.available())
+  for (unsigned int x = 0; x < matrix_width; x++)
   {
-    // freqBin counts which FFT frequency data has been used,
-    // starting at low frequency
-    freqBin = 0;
-    allLevelsPassThreshold[0] = 0; // TODO: reset all array
+    // get the volume for each horizontal pixel position
+    level = fft.read(freqBin, freqBin + frequencyBinsHorizontal[x] - 1);
 
-    for (x = 0; x < matrix_width; x++)
+    // getHueFromOctava();
+    // level = fft.read(freqBin, freqBin + frequencyBinsHorizontal[x] - 1);
+    // uncomment to see the spectrum in Arduino's Serial Monitor
+    // Serial.print(level);
+    // Serial.print("  ");
+    for (unsigned int y = 0; y < matrix_height; y++)
     {
-      // get the volume for each horizontal pixel position
-      level = fft.read(freqBin, freqBin + frequencyBinsHorizontal[x] - 1);
-
-      // getHueFromOctava();
-      // level = fft.read(freqBin, freqBin + frequencyBinsHorizontal[x] - 1);
-      // uncomment to see the spectrum in Arduino's Serial Monitor
-      // Serial.print(level);
-      // Serial.print("  ");
-      for (y = 0; y < matrix_height; y++)
+      // for each vertical pixel, check if above the threshold
+      // and turn the LED on or off
+      if (level >= thresholdVertical[y])
       {
-        // for each vertical pixel, check if above the threshold
-        // and turn the LED on or off
-        int color;
-        if (level >= thresholdVertical[y])
+        allLevelsPassThreshold[x] += 1;
+        currV = FadeMaxV;
+        int color = HSVtoRGB(currH, FadeMaxS, FadeMaxV);
+        // Serial.print(currH);
+        // Serial.print(" ");
+        leds.setPixel(xy(x, y), color);
+      }
+      else
+      {
+        currV = currV - (FadeMaxV - FadeMinV) / colorFadeFactor;
+        if (currV < FadeMinV)
         {
-          allLevelsPassThreshold[x] += 1;
-          currV = FadeMaxV;
-          color = HSVtoRGB(currH, FadeMaxS, FadeMaxV);
-          // Serial.print(currH);
-          // Serial.print(" ");
-          leds.setPixel(xy(x, y), color);
+          currV = FadeMinV;
         }
-        else
-        {
 
-          currV = currV - (FadeMaxV - FadeMinV) / colorFadeFactor;
-          if (currV < FadeMinV)
-          {
-            currV = FadeMinV;
-          }
-
-          color = HSVtoRGB(currH, FadeMinS, FadeMinV);
-          // Serial.print(color);
-          // Serial.print(" ");
-          leds.setPixel(xy(x, y), color);
-        }
-        // Serial.println(" ");
+        int color = HSVtoRGB(currH, FadeMinS, FadeMinV);
+        // Serial.print(color);
+        // Serial.print(" ");
+        leds.setPixel(xy(x, y), color);
       }
       // Serial.println(" ");
-      // increment the frequency bin count, so we display
-      // low to higher frequency from left to right
-      freqBin = freqBin + frequencyBinsHorizontal[x];
     }
-
-    currH = calcNextStepColor(allLevelsPassThreshold, currH);
-    Serial.print(currH);
-    Serial.println(" ");
-    // after all pixels set, show them all at the same instant
-    leds.show();
-    // FastLED.show();
-    // Serial.println();
+    // Serial.println(" ");
+    // increment the frequency bin count, so we display
+    // low to higher frequency from left to right
+    freqBin = freqBin + frequencyBinsHorizontal[x];
   }
+
+  currH = calcNextStepColor(allLevelsPassThreshold, currH);
+  Serial.print(currH);
+  Serial.println(" ");
+  // after all pixels set, show them all at the same instant
+  leds.show();
 }
