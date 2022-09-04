@@ -21,7 +21,7 @@ const unsigned int baseVal = 15;
 
 // These parameters adjust the vertical thresholds
 float maxLevel = 0.01;           // 1.0 = max, lower is more "sensitive"
-double colorRangeFactor = 0.01;  // 0-1 when 1 is the fastets change betwwen colors
+double colorRangeFactor = 0.01;  // 0-1 when 1 is the fastest change between colors
 const float dynamicRange = 40.0; // total range to display, in decibels
 const float linearBlend = 0.7;   // useful range is 0 to 0.7
 const unsigned int blinkThresholdVerticalFromLevel = 10;
@@ -72,31 +72,30 @@ void computeVerticalLevels()
 }
 
 // setting up the code for the 2 potentiometers
-const int POT_PIN_SENSATIVITY = 3;
+const int POT_PIN_Sensitivity = 3;
 const int POT_PIN_COLOR = 4;
-float prevPotValSensativity = maxLevel;
+float prevPotValSensitivity = maxLevel;
 
-int analogReadZeroToOne(int pin)
+float analogReadZeroToOne(int pin)
 {
-  int val = analogRead(pin);
-  float rangeVal = val / 1024; // 10bit sample
-  return rangeVal;
+  return analogRead(pin) / 1024.0; // 10bit sample
 }
 
 void ApplyPotentiometerSettings()
 {
   // read the potentiometer values
-  int potValSensativity = analogReadZeroToOne(POT_PIN_SENSATIVITY);
-  int potValColor = analogReadZeroToOne(POT_PIN_COLOR);
+  float potValSensitivity = analogReadZeroToOne(POT_PIN_Sensitivity);
+  float potValColor = analogReadZeroToOne(POT_PIN_COLOR);
 
   // apply the potentiometer values
-  if (fabsf(prevPotValSensativity - potValSensativity) > 0.001)
+  if (fabsf(prevPotValSensitivity - potValSensitivity) > 0.01)
   {
-    maxLevel = potValSensativity;
+    maxLevel = potValSensitivity;
     computeVerticalLevels();
-    prevPotValSensativity = potValSensativity;
+    prevPotValSensitivity = potValSensitivity;
   }
   colorRangeFactor = potValColor;
+  Serial.print("Pot color: ");Serial.print(potValColor);Serial.print(" Pot sense: ");Serial.println(potValSensitivity);
 }
 
 // Run setup once
@@ -220,6 +219,9 @@ void loop()
   {
     return;
   }
+  
+  // restore to apply potentiometer values once physically connected
+  // ApplyPotentiometerSettings();
 
   int allLevelsPassThreshold[numberOfFrequencies];
   initArr(allLevelsPassThreshold, numberOfFrequencies);
