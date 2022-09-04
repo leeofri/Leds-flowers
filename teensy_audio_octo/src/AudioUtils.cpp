@@ -60,3 +60,29 @@ float readFrequencyLevel(int frequency)
     unsigned int binLast = frequencyBinsIndices[frequency + 1] - 1; // binLast is included, therefor we need to subtract 1
     return fft.read(binFirst, binLast);
 }
+
+int DominantFrequencyBucket(int levelArr[], int arrSize,int bucketSize)
+{
+    int max = 0;
+    int maxIndex = 0;
+    int frequenciesResultSize = arrSize / bucketSize;
+    for (int i = 0; i < frequenciesResultSize; i++)
+    {
+        int sum = 0;
+        for (int j = 0; j < bucketSize; j++)
+        {
+            if (i*bucketSize + j < arrSize)
+            {
+                sum += levelArr[i*bucketSize + j];
+            }
+        }
+
+        if (max < sum)
+        {
+            max = sum;
+            maxIndex = i;
+        }
+    }
+
+    return maxIndex;
+}

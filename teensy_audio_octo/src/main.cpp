@@ -144,10 +144,11 @@ const int octavaNumbersRange[octavaNumber + 1] = {
     134,
     450};
 
-// float minMaxNormalization(float value, float min, float max, float newMin, float newMax)
-// {
-//   return (value - min) * (newMax - newMin) / (max - min) + newMin;
-// }
+float minMaxNormalization(float value, float min, float max, float newMin, float newMax)
+{
+  return (value - min) * (newMax - newMin) / (max - min) + newMin;
+}
+
 const int maxAllLevelsValue = levelsPerFrequency * numberOfFrequencies;
 const int LevelColorInfluant[numberOfFrequencies] = {
     16, 16,
