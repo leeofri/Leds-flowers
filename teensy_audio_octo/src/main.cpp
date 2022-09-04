@@ -1,17 +1,3 @@
-// LED Audio Spectrum Analyzer Display
-//
-// Creates an impressive LED light show to music input
-//   using Teensy 3.1 with the OctoWS2811 adaptor board
-//   http://www.pjrc.com/store/teensy31.html
-//   http://www.pjrc.com/store/octo28_adaptor.html
-//
-// Line Level Audio Input connects to analog pin A3
-//   Recommended input circuit:
-//   http://www.pjrc.com/teensy/gui/?info=AudioInputAnalog
-//
-// This example code is in the public domain.
-
-// #include <OctoWS2811.h>
 #include <Wire.h>
 #include <ColorUtils.h>
 #include <AudioUtils.h>
@@ -169,8 +155,8 @@ float calcNextStepColor(int allLevels[numberOfFrequencies], double hue)
     nextHue += (long)allLevels[i]; // minMaxNormalization(allLevels[i], 0, levelsPerFrequency, 0, 6);//((FadeMaxH-FadeMinH)/numberOfFrequencies)+1);
   }
 
-  Serial.print(nextHue);
-  Serial.print("->");
+  // Serial.print(nextHue);
+  // Serial.print("->");
 
   float nextHueMul = (float)nextHue * 1.5;
 
@@ -184,11 +170,11 @@ float calcNextStepColor(int allLevels[numberOfFrequencies], double hue)
   }
 
   nextHue = map(nextHue, 0, maxAllLevelsValue, FadeMinH, 359); //((FadeMaxH-FadeMinH)/numberOfFrequencies)+1);
-  Serial.print(nextHue);
-  Serial.print("->");
+  // Serial.print(nextHue);
+  // Serial.print("->");
 
   nextHue = (colorRangeFactor * (double)nextHue) + (1.0 - colorRangeFactor) * (double)hue;
-  Serial.println(nextHue);
+  // Serial.println(nextHue);
   if (nextHue > FadeMaxH)
   {
     nextHue = FadeMaxH;
