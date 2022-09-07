@@ -7,12 +7,12 @@
 // max HSV color ( Blink )
 const int FadeMaxH = 290;
 const int FadeMaxS = 100;
-const int FadeMaxV = 20;
+const int FadeMaxV = 40;
 
 // min HSV color ( Solid / base color )
 const int FadeMinH = 30;
 const int FadeMinS = 100;
-const int FadeMinV = 1;
+const int FadeMinV = 10;
 
 // current HSV color
 float currH = FadeMinH;
