@@ -21,12 +21,23 @@ int frequencyBinsHorizontal[numberOfFrequencies] = {
 int frequencyBinsIndices[numberOfFrequencies + 1] = {0};
 
 // Audio library objects
-AudioInputAnalog adc1;   // xy=99,55
+AudioInputI2S    i2s0;
+AudioMixer4      mixer1;
+AudioAmplifier   amp1;
+// AudioInputAnalog adc1;   // xy=99,55
+
 AudioAnalyzeFFT1024 fft; // xy=265,75
 AudioOutputI2S i2s1;     // xy=378,99
-AudioConnection patchCord1(adc1, 0, i2s1, 0);
-AudioConnection patchCord2(adc1, 0, i2s1, 1);
-AudioConnection patchCord3(adc1, fft);
+
+AudioConnection patchCord1(i2s0, 0, mixer1, 0);
+AudioConnection patchCord2(i2s0, 1, mixer1, 1);
+AudioConnection patchCord3(mixer1, amp1);
+AudioConnection patchCord4(amp1, 0, i2s1, 0);
+AudioConnection patchCord5(amp1, 0, i2s1, 1);
+AudioConnection patchCord6(amp1, fft);
+// AudioConnection patchCord1(adc1, 0, i2s1, 0);
+// AudioConnection patchCord2(adc1, 0, i2s1, 1);
+// AudioConnection patchCord3(adc1, fft);
 AudioControlSGTL5000 sgtl5000_1; // xy=265,161
 
 void fillFrequencyBinsIndices()
@@ -44,8 +55,8 @@ void setupAudio()
 {
     AudioMemory(30);
     sgtl5000_1.enable();
-    sgtl5000_1.volume(0.5);
-
+    sgtl5000_1.volume(0.7);
+    amp1.gain(1.0);
     fillFrequencyBinsIndices();
 }
 
@@ -59,4 +70,30 @@ float readFrequencyLevel(int frequency)
     unsigned int binFirst = frequencyBinsIndices[frequency];
     unsigned int binLast = frequencyBinsIndices[frequency + 1] - 1; // binLast is included, therefor we need to subtract 1
     return fft.read(binFirst, binLast);
+}
+
+int DominantFrequencyBucket(int levelArr[], int arrSize,int bucketSize)
+{
+    int max = 0;
+    int maxIndex = 0;
+    int frequenciesResultSize = arrSize / bucketSize;
+    for (int i = 0; i < frequenciesResultSize; i++)
+    {
+        int sum = 0;
+        for (int j = 0; j < bucketSize; j++)
+        {
+            if (i*bucketSize + j < arrSize)
+            {
+                sum += levelArr[i*bucketSize + j];
+            }
+        }
+
+        if (max < sum)
+        {
+            max = sum;
+            maxIndex = i;
+        }
+    }
+
+    return maxIndex;
 }

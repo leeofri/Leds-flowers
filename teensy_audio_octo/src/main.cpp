@@ -1,17 +1,3 @@
-// LED Audio Spectrum Analyzer Display
-//
-// Creates an impressive LED light show to music input
-//   using Teensy 3.1 with the OctoWS2811 adaptor board
-//   http://www.pjrc.com/store/teensy31.html
-//   http://www.pjrc.com/store/octo28_adaptor.html
-//
-// Line Level Audio Input connects to analog pin A3
-//   Recommended input circuit:
-//   http://www.pjrc.com/teensy/gui/?info=AudioInputAnalog
-//
-// This example code is in the public domain.
-
-// #include <OctoWS2811.h>
 #include <Wire.h>
 #include <ColorUtils.h>
 #include <AudioUtils.h>
@@ -19,25 +5,26 @@
 #include <Config.h>
 
 // max HSV color ( Blink )
-const float FadeMaxH = 360;
-const float FadeMaxS = 100;
-const float FadeMaxV = 100;
+const int FadeMaxH = 290;
+const int FadeMaxS = 100;
+const int FadeMaxV = 40;
 
 // min HSV color ( Solid / base color )
-const float FadeMinH = 30;
-const float FadeMinS = 100;
-const float FadeMinV = 6;
+const int FadeMinH = 30;
+const int FadeMinS = 100;
+const int FadeMinV = 10;
 
 // current HSV color
 float currH = FadeMinH;
 
 const unsigned int baseVal = 15;
-float colorFadeFactor = 1.0; // 1 is none
 
 // These parameters adjust the vertical thresholds
-float maxLevel = 0.001;          // 1.0 = max, lower is more "sensitive"
+float maxLevel = 0.01;           // 1.0 = max, lower is more "sensitive"
+double colorRangeFactor = 0.01;  // 0-1 when 1 is the fastest change between colors
 const float dynamicRange = 40.0; // total range to display, in decibels
-const float linearBlend = 0.5;   // useful range is 0 to 0.7
+const float linearBlend = 0.7;   // useful range is 0 to 0.7
+const unsigned int blinkThresholdVerticalFromLevel = 10;
 
 // OctoWS2811 objects
 const int bytesPerLed = 3;
@@ -53,6 +40,7 @@ OctoWS2811 leds(ledsPerStrip, displayMemory, drawingMemory, config);
 // vertical pixel to turn on.  Computed in setup() using
 // the 3 parameters above.
 float thresholdVertical[levelsPerFrequency];
+float thresholdVerticalBlink[levelsPerFrequency];
 
 // Run once from setup, the compute the vertical levels
 void computeVerticalLevels()
@@ -69,35 +57,45 @@ void computeVerticalLevels()
     logLevel = logLevel * (1.0 - linearBlend);
     thresholdVertical[y] = (logLevel + linearLevel) * maxLevel;
   }
+
+  for (y = 0; y < levelsPerFrequency; y++)
+  {
+    if (y > blinkThresholdVerticalFromLevel)
+    {
+      thresholdVerticalBlink[y] = thresholdVertical[blinkThresholdVerticalFromLevel];
+    }
+    else
+    {
+      thresholdVerticalBlink[y] = thresholdVertical[y];
+    }
+  }
 }
 
 // setting up the code for the 2 potentiometers
-const int POT_PIN_SENSATIVITY = 3;
+const int POT_PIN_Sensitivity = 3;
 const int POT_PIN_COLOR = 4;
-float prevPotValSensativity = maxLevel;
-float colorRangeFactor = 1;
+float prevPotValSensitivity = maxLevel;
 
-int analogReadZeroToOne(int pin)
+float analogReadZeroToOne(int pin)
 {
-  int val = analogRead(pin);
-  float rangeVal = val / 1024; // 10bit sample
-  return rangeVal;
+  return analogRead(pin) / 1024.0; // 10bit sample
 }
 
 void ApplyPotentiometerSettings()
 {
   // read the potentiometer values
-  int potValSensativity = analogReadZeroToOne(POT_PIN_SENSATIVITY);
-  int potValColor = analogReadZeroToOne(POT_PIN_COLOR);
+  float potValSensitivity = analogReadZeroToOne(POT_PIN_Sensitivity);
+  float potValColor = analogReadZeroToOne(POT_PIN_COLOR);
 
   // apply the potentiometer values
-  if (fabsf(prevPotValSensativity - potValSensativity) > 0.001)
+  if (fabsf(prevPotValSensitivity - potValSensitivity) > 0.01)
   {
-    maxLevel = potValSensativity;
+    maxLevel = potValSensitivity;
     computeVerticalLevels();
-    prevPotValSensativity = potValSensativity;
+    prevPotValSensitivity = potValSensitivity;
   }
   colorRangeFactor = potValColor;
+  Serial.print("Pot color: ");Serial.print(potValColor);Serial.print(" Pot sense: ");Serial.println(potValSensitivity);
 }
 
 // Run setup once
@@ -110,6 +108,12 @@ void setup()
   // compute the vertical thresholds before starting
   computeVerticalLevels();
 
+  Serial.print("computeVerticalLevels:");
+  for (int i = 0; i < levelsPerFrequency; i++)
+  {
+    Serial.print(thresholdVertical[i]);
+    Serial.print(",");
+  }
   Serial.println("Setup yayyyyyy22222!!");
   // turn on the display
   leds.begin();
@@ -125,33 +129,51 @@ const int octavaNumbersRange[octavaNumber + 1] = {
     134,
     450};
 
-int minMaxNormalization(int value, int min, int max, int newMin, int newMax)
+float minMaxNormalization(float value, float min, float max, float newMin, float newMax)
 {
   return (value - min) * (newMax - newMin) / (max - min) + newMin;
 }
 
+const int maxAllLevelsValue = levelsPerFrequency * numberOfFrequencies;
 const int LevelColorInfluant[numberOfFrequencies] = {
-  12,12,
-  12,12,12,12,12,12,12, 
-  10,10,10,10,10,10,10, 
-  10,10,10,10,10,10,10, 
-  8,8,8,8,8,8,8,
-  6,6,6,6,6,6,6,
-  6,6,6,6,6,6,6,
-  4,4,4,4,4,4,4,
-  2,2,2,2,2,2,2,
-  1,1
-  };
-int calcNextStepColor(int allLevels[numberOfFrequencies], float hue)
+    16, 16,
+    15, 15, 15, 15, 15, 15, 15,
+    8, 8, 8, 8, 8, 8, 8,
+    8, 8, 8, 8, 8, 8, 8,
+    8, 8, 8, 8, 8, 8, 8,
+    8, 8, 8, 8, 8, 8, 8,
+    8, 8, 8, 8, 8, 8, 8,
+    11, 11, 11, 11, 11, 11, 11,
+    12, 12, 12, 12, 12, 12, 12,
+    12, 12};
+float calcNextStepColor(int allLevels[numberOfFrequencies], double hue)
 {
-  int nextHue = 0;
-  for (unsigned int i = 0; i < numberOfFrequencies; i++)
+  long nextHue = 0;
+  for (unsigned int i = 1; i < numberOfFrequencies; i++)
   {
-    nextHue += minMaxNormalization(allLevels[i] * 0.6, 0, levelsPerFrequency, 0, LevelColorInfluant[i]);
+    nextHue += (long)allLevels[i]; // minMaxNormalization(allLevels[i], 0, levelsPerFrequency, 0, 6);//((FadeMaxH-FadeMinH)/numberOfFrequencies)+1);
   }
 
-  nextHue = (colorRangeFactor * nextHue) + (1.0 - colorRangeFactor) * hue;
+  // Serial.print(nextHue);
+  // Serial.print("->");
 
+  float nextHueMul = (float)nextHue * 1.5;
+
+  if (nextHueMul > maxAllLevelsValue)
+  {
+    nextHue = maxAllLevelsValue - 1;
+  }
+  else
+  {
+    nextHue = (long)nextHueMul;
+  }
+
+  nextHue = map(nextHue, 0, maxAllLevelsValue, FadeMinH, 359); //((FadeMaxH-FadeMinH)/numberOfFrequencies)+1);
+  // Serial.print(nextHue);
+  // Serial.print("->");
+
+  nextHue = (colorRangeFactor * (double)nextHue) + (1.0 - colorRangeFactor) * (double)hue;
+  // Serial.println(nextHue);
   if (nextHue > FadeMaxH)
   {
     nextHue = FadeMaxH;
@@ -161,7 +183,7 @@ int calcNextStepColor(int allLevels[numberOfFrequencies], float hue)
   {
     nextHue = FadeMinH;
   }
-
+  // Serial.println(nextHue);
   return nextHue;
 }
 
@@ -177,11 +199,18 @@ unsigned int xy(unsigned int x, unsigned int y)
 // for spred close level in similar high on the flower
 unsigned int xy8FlowersSpred(unsigned int x, unsigned int y)
 {
-  unsigned int currPos = ((y * (numPins-1))%levelsPerFrequency * numberOfFrequencies)+ x;
+  unsigned int currPos = ((y * (numPins - 1)) % levelsPerFrequency * numberOfFrequencies) + x;
   // Serial.println(currPos);
   return currPos;
 }
 
+void initArr(int arr[], int size)
+{
+  for (int i = 0; i < size; i++)
+  {
+    arr[i] = 0;
+  }
+}
 
 // Run repetitively
 void loop()
@@ -190,10 +219,12 @@ void loop()
   {
     return;
   }
+  
+  // restore to apply potentiometer values once physically connected
+  // ApplyPotentiometerSettings();
 
-  int allLevelsPassThreshold[numberOfFrequencies] = {0};
-
-  allLevelsPassThreshold[0] = 0; // TODO: reset all array
+  int allLevelsPassThreshold[numberOfFrequencies];
+  initArr(allLevelsPassThreshold, numberOfFrequencies);
 
   for (unsigned int frequency = 0; frequency < numberOfFrequencies; frequency++)
   {
@@ -207,26 +238,33 @@ void loop()
     {
       // for each vertical pixel, check if above the threshold
       // and turn the LED on or off
-      unsigned int octoIndex = xy(frequency, level);
-      if (currLevelRead >= thresholdVertical[level])
+      unsigned int octoIndex = xy8FlowersSpred(frequency, level);
+
+      // calc trashold for blink
+      if (currLevelRead >= thresholdVerticalBlink[level])
       {
-        allLevelsPassThreshold[frequency] += 1;
-        int color = HSVtoRGB(currH, FadeMaxS, FadeMaxV);
+        int color = makeColor(currH, FadeMaxS, FadeMaxV);
         leds.setPixel(octoIndex, color);
       }
       else
       {
-        int color = HSVtoRGB(currH, FadeMinS, FadeMinV);
+        int color = makeColor(currH, FadeMinS, FadeMinV);
         leds.setPixel(octoIndex, color);
       }
+
+      if (currLevelRead >= thresholdVertical[level])
+      {
+        allLevelsPassThreshold[frequency] += 1;
+      }
+
       // Serial.println(" ");
     }
     // Serial.println(" ");
   }
 
   currH = calcNextStepColor(allLevelsPassThreshold, currH);
-  Serial.print(currH);
-  Serial.println(" ");
+  // Serial.print(currH);
+  // Serial.println(" ");
   // after all pixels set, show them all at the same instant
   leds.show();
 }
