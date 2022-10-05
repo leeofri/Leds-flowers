@@ -5,23 +5,29 @@
 #include <Config.h>
 
 // max HSV color ( Blink )
-const int FadeMaxH = 290;
+const int FadeMaxH = 300;
 const int FadeMaxS = 100;
-const int FadeMaxV = 40;
+const int FadeMaxV = 51;
 
 // min HSV color ( Solid / base color )
-const int FadeMinH = 30;
+const int FadeMinH = 10;
 const int FadeMinS = 100;
 const int FadeMinV = 10;
 
 // current HSV color
 float currH = FadeMinH;
 
+// bit trshold for snack anaimation
+const int beatThreshold = 24; // 0-31
+bool isBeat = false;
+bool prevIsBeat = false;
+int beatOffset = 0; // 0-nuber of leds
+
 const unsigned int baseVal = 15;
 
 // These parameters adjust the vertical thresholds
-float maxLevel = 0.01;           // 1.0 = max, lower is more "sensitive"
-double colorRangeFactor = 0.01;  // 0-1 when 1 is the fastest change between colors
+float maxLevel = 0.06;           // 1.0 = max, lower is more "sensitive"
+double colorRangeFactor = 0.06;  // 0-1 when 1 is the fastest change between colors
 const float dynamicRange = 40.0; // total range to display, in decibels
 const float linearBlend = 0.7;   // useful range is 0 to 0.7
 const unsigned int blinkThresholdVerticalFromLevel = 10;
@@ -30,6 +36,7 @@ const unsigned int blinkThresholdVerticalFromLevel = 10;
 const int bytesPerLed = 3;
 const int ledsPerStrip = numberOfFrequencies * levelsPerFrequency / 8;
 const int numPins = 8;
+const int ledsNumber = ledsPerStrip * numPins;
 
 DMAMEM int displayMemory[ledsPerStrip * numPins * bytesPerLed / 4];
 int drawingMemory[ledsPerStrip * numPins * bytesPerLed / 4];
@@ -76,6 +83,34 @@ const int POT_PIN_Sensitivity = 3;
 const int POT_PIN_COLOR = 4;
 float prevPotValSensitivity = maxLevel;
 
+void setIsBeatAndOffset(int allLevels[numberOfFrequencies])
+{
+  int currLevelPassTrashold = 0;
+  for (int i = 0; i < numberOfFrequencies; i++)
+  {
+    if (allLevels[i] > beatThreshold)
+    {
+      currLevelPassTrashold++;
+    }
+  }
+
+  prevIsBeat = isBeat;
+  if (currLevelPassTrashold > 29 && !prevIsBeat)
+  {
+    isBeat = true;
+  }
+  else if (currLevelPassTrashold < 29 && prevIsBeat)
+  {
+    isBeat = false;
+  }
+
+  if (isBeat)
+  {
+    beatOffset++;
+    beatOffset = beatOffset % ledsPerStrip;
+  }
+}
+
 float analogReadZeroToOne(int pin)
 {
   return analogRead(pin) / 1024.0; // 10bit sample
@@ -84,8 +119,8 @@ float analogReadZeroToOne(int pin)
 void ApplyPotentiometerSettings()
 {
   // read the potentiometer values
-  float potValSensitivity = analogReadZeroToOne(POT_PIN_Sensitivity);
-  float potValColor = analogReadZeroToOne(POT_PIN_COLOR);
+  float potValSensitivity = 0.04; // analogReadZeroToOne(POT_PIN_Sensitivity);
+  float potValColor = 0.08;
 
   // apply the potentiometer values
   if (fabsf(prevPotValSensitivity - potValSensitivity) > 0.01)
@@ -95,7 +130,10 @@ void ApplyPotentiometerSettings()
     prevPotValSensitivity = potValSensitivity;
   }
   colorRangeFactor = potValColor;
-  Serial.print("Pot color: ");Serial.print(potValColor);Serial.print(" Pot sense: ");Serial.println(potValSensitivity);
+  Serial.print("Pot color: ");
+  Serial.print(potValColor);
+  Serial.print(" Pot sense: ");
+  Serial.println(potValSensitivity);
 }
 
 // Run setup once
@@ -204,6 +242,11 @@ unsigned int xy8FlowersSpred(unsigned int x, unsigned int y)
   return currPos;
 }
 
+unsigned int getBitOffset(unsigned int ledPosition)
+{
+  return (ledPosition + beatOffset) % ledsNumber;
+}
+
 void initArr(int arr[], int size)
 {
   for (int i = 0; i < size; i++)
@@ -219,7 +262,7 @@ void loop()
   {
     return;
   }
-  
+
   // restore to apply potentiometer values once physically connected
   // ApplyPotentiometerSettings();
 
@@ -238,7 +281,7 @@ void loop()
     {
       // for each vertical pixel, check if above the threshold
       // and turn the LED on or off
-      unsigned int octoIndex = xy8FlowersSpred(frequency, level);
+      unsigned int octoIndex = getBitOffset(xy8FlowersSpred(frequency, level));
 
       // calc trashold for blink
       if (currLevelRead >= thresholdVerticalBlink[level])
@@ -263,6 +306,7 @@ void loop()
   }
 
   currH = calcNextStepColor(allLevelsPassThreshold, currH);
+  setIsBeatAndOffset(allLevelsPassThreshold);
   // Serial.print(currH);
   // Serial.println(" ");
   // after all pixels set, show them all at the same instant
