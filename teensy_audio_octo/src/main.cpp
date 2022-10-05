@@ -26,8 +26,8 @@ int beatOffset = 0; // 0-nuber of leds
 const unsigned int baseVal = 15;
 
 // These parameters adjust the vertical thresholds
-float maxLevel = 0.06;           // 1.0 = max, lower is more "sensitive"
-double colorRangeFactor = 0.06;  // 0-1 when 1 is the fastest change between colors
+float maxLevel = 0.03;           // 1.0 = max, lower is more "sensitive"
+double colorRangeFactor = 0.08;  // 0-1 when 1 is the fastest change between colors
 const float dynamicRange = 40.0; // total range to display, in decibels
 const float linearBlend = 0.7;   // useful range is 0 to 0.7
 const unsigned int blinkThresholdVerticalFromLevel = 10;
@@ -158,14 +158,7 @@ void setup()
 }
 
 // retun int 0-360
-const int octavaNumber = 3;
-float octavaArr[octavaNumber] = {0, 0, 0};
-float prevOctavaArr[octavaNumber] = {0, 0, 0};
-const int octavaNumbersRange[octavaNumber + 1] = {
-    0,
-    31,
-    134,
-    450};
+const int octavaNumber = 7;
 
 float minMaxNormalization(float value, float min, float max, float newMin, float newMax)
 {
@@ -225,6 +218,39 @@ float calcNextStepColor(int allLevels[numberOfFrequencies], double hue)
   return nextHue;
 }
 
+const int colorOffsetRange = 60;
+const int octavaOnTrashold = 25;// 0 - 32
+const int octavaSpred[8] = {0, 1, 2, 4, 8, 15, 30, 60};
+float octavaColorSpredOffsets[octavaNumber] = {0};
+void calcFlowerOctaveColorOffset(int allLevels[numberOfFrequencies]) {
+  int startIndex = 0;
+  int totalOCtavasOn = 0;
+
+  for (int i = 1; i <= octavaNumber; i++) {
+    octavaColorSpredOffsets[i] = 0;
+    for (int j=startIndex; j < octavaSpred[i]; j++) {
+      octavaColorSpredOffsets[i] += allLevels[j];
+    }
+    octavaColorSpredOffsets[i] = octavaColorSpredOffsets[i] / (octavaSpred[i]-startIndex);
+
+    if ( octavaColorSpredOffsets[i] > octavaOnTrashold) {
+      totalOCtavasOn++;
+    }
+
+    octavaColorSpredOffsets[i] = map(octavaColorSpredOffsets[i],0,40,0,colorOffsetRange);
+    startIndex = octavaSpred[i];
+  }
+
+}
+
+float getFlowerColoroffset(int octoIdex,float hue){
+  int currFlower = ((octoIdex / ledsPerStrip) % octavaNumber);
+  float newHue = hue + octavaColorSpredOffsets[currFlower];
+  if (newHue > FadeMaxH){
+    newHue = FadeMaxH;
+  }
+  return newHue;
+}
 // A simple xy() function to turn display matrix coordinates
 // into the index numbers OctoWS2811 requires.  If your LEDs
 // are arranged differently, edit this code...
@@ -273,7 +299,12 @@ void loop()
   {
     // get the volume for each horizontal pixel position
     float currLevelRead = readFrequencyLevel(frequency);
+    // Serial.print(currH);
+    // Serial.print("  ");
 
+    // Serial.print(flowerCurrH);
+    // Serial.print("  ");
+    // Serial.println("");
     // uncomment to see the spectrum in Arduino's Serial Monitor
     // Serial.print(currLevelRead);
     // Serial.print("  ");
@@ -281,17 +312,19 @@ void loop()
     {
       // for each vertical pixel, check if above the threshold
       // and turn the LED on or off
-      unsigned int octoIndex = getBitOffset(xy8FlowersSpred(frequency, level));
+      unsigned int octoIndex = xy8FlowersSpred(frequency, level);
+      octoIndex = getBitOffset(octoIndex);
+      float flowerCurrH = getFlowerColoroffset(octoIndex,currH);
 
       // calc trashold for blink
       if (currLevelRead >= thresholdVerticalBlink[level])
       {
-        int color = makeColor(currH, FadeMaxS, FadeMaxV);
+        int color = makeColor(flowerCurrH, FadeMaxS, FadeMaxV);
         leds.setPixel(octoIndex, color);
       }
       else
       {
-        int color = makeColor(currH, FadeMinS, FadeMinV);
+        int color = makeColor(flowerCurrH, FadeMinS, FadeMinV);
         leds.setPixel(octoIndex, color);
       }
 
@@ -307,8 +340,15 @@ void loop()
 
   currH = calcNextStepColor(allLevelsPassThreshold, currH);
   setIsBeatAndOffset(allLevelsPassThreshold);
+  calcFlowerOctaveColorOffset(allLevelsPassThreshold);
+
+  // for (int i = 0; i < octavaNumber; i++)
+  // {
+  //   Serial.print(octavaColorSpredOffsets[i]);
+  //   Serial.print("  ");
+  // }
   // Serial.print(currH);
-  // Serial.println(" ");
+  Serial.println(" ");
   // after all pixels set, show them all at the same instant
   leds.show();
 }
