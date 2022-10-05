@@ -26,8 +26,8 @@ int beatOffset = 0; // 0-nuber of leds
 const unsigned int baseVal = 15;
 
 // These parameters adjust the vertical thresholds
-float maxLevel = 0.03;           // 1.0 = max, lower is more "sensitive"
-double colorRangeFactor = 0.08;  // 0-1 when 1 is the fastest change between colors
+float maxLevel = 0.05;           // 1.0 = max, lower is more "sensitive"
+double colorRangeFactor = 0.1;  // 0-1 when 1 is the fastest change between colors
 const float dynamicRange = 40.0; // total range to display, in decibels
 const float linearBlend = 0.7;   // useful range is 0 to 0.7
 const unsigned int blinkThresholdVerticalFromLevel = 10;
@@ -95,11 +95,11 @@ void setIsBeatAndOffset(int allLevels[numberOfFrequencies])
   }
 
   prevIsBeat = isBeat;
-  if (currLevelPassTrashold > 29 && !prevIsBeat)
+  if (currLevelPassTrashold > 20 && !prevIsBeat)
   {
     isBeat = true;
   }
-  else if (currLevelPassTrashold < 29 && prevIsBeat)
+  else if (currLevelPassTrashold < 20 && prevIsBeat)
   {
     isBeat = false;
   }
@@ -188,7 +188,7 @@ float calcNextStepColor(int allLevels[numberOfFrequencies], double hue)
   // Serial.print(nextHue);
   // Serial.print("->");
 
-  float nextHueMul = (float)nextHue * 1.5;
+  float nextHueMul = (float)nextHue * 1.8;
 
   if (nextHueMul > maxAllLevelsValue)
   {
@@ -218,7 +218,7 @@ float calcNextStepColor(int allLevels[numberOfFrequencies], double hue)
   return nextHue;
 }
 
-const int colorOffsetRange = 60;
+const int colorOffsetRange = 40;
 const int octavaOnTrashold = 25;// 0 - 32
 const int octavaSpred[8] = {0, 1, 2, 4, 8, 15, 30, 60};
 float octavaColorSpredOffsets[octavaNumber] = {0};
@@ -227,6 +227,7 @@ void calcFlowerOctaveColorOffset(int allLevels[numberOfFrequencies]) {
   int totalOCtavasOn = 0;
 
   for (int i = 1; i <= octavaNumber; i++) {
+    float prevOctavaColorSpredOffset = octavaColorSpredOffsets[i];
     octavaColorSpredOffsets[i] = 0;
     for (int j=startIndex; j < octavaSpred[i]; j++) {
       octavaColorSpredOffsets[i] += allLevels[j];
@@ -238,6 +239,7 @@ void calcFlowerOctaveColorOffset(int allLevels[numberOfFrequencies]) {
     }
 
     octavaColorSpredOffsets[i] = map(octavaColorSpredOffsets[i],0,40,0,colorOffsetRange);
+    octavaColorSpredOffsets[i] = (0.09 * (double)octavaColorSpredOffsets[i]) + (1.0 - 0.09) * (double)prevOctavaColorSpredOffset;
     startIndex = octavaSpred[i];
   }
 
@@ -314,7 +316,7 @@ void loop()
       // and turn the LED on or off
       unsigned int octoIndex = xy8FlowersSpred(frequency, level);
       octoIndex = getBitOffset(octoIndex);
-      float flowerCurrH = getFlowerColoroffset(octoIndex,currH);
+      float flowerCurrH =getFlowerColoroffset(octoIndex,currH);// currH;/
 
       // calc trashold for blink
       if (currLevelRead >= thresholdVerticalBlink[level])
